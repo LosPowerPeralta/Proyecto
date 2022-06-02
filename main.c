@@ -5,7 +5,7 @@
 #define LEFT 0x41
 #define UP 0x57
 #define DOWN 0x53
-#define SPACE VK_BACK
+#define SPACE 0x20
 /*
 Derecha(D) = 0x44
 izquierda(A) = 0x41
@@ -63,16 +63,109 @@ void mostrarEscenario()
   printf("=================================================================\n");
 }
 
-void movimiento(Pixel *user) 
+void saltoDerecha(Pixel *cabeza) {
+    int alturaMax = cabeza->y - 4; 
+    int distanciaMax = cabeza->x + 9;
+
+    while (cabeza->y > alturaMax) {
+        Sleep(40);
+        gotoxy(cabeza->x, cabeza->y);
+        printf(" ");
+        if (cabeza->x != 63) cabeza->x++;
+        if (cabeza->y == 1) break;
+        cabeza->y--;
+        gotoxy(cabeza->x, cabeza->y);
+        printf("x");
+    }
+    
+    gotoxy(cabeza->x, cabeza->y);
+    printf(" ");
+    gotoxy(cabeza->x, cabeza->y);
+    printf("x");
+
+    while (cabeza->y < 18) {
+        Sleep(40);
+        gotoxy(cabeza->x, cabeza->y);
+        printf(" ");
+        if (cabeza->x != 63) cabeza->x++;
+        if (cabeza->y != 18) cabeza->y++;
+        gotoxy(cabeza->x, cabeza->y);
+        printf("x");
+    }
+}
+
+void saltoIzquierda(Pixel *cabeza) {
+    int alturaMax = cabeza->y - 4; 
+
+    while (cabeza->y > alturaMax) {
+        Sleep(40);
+        gotoxy(cabeza->x, cabeza->y);
+        printf(" ");
+        if (cabeza->x != 1) cabeza->x--;
+        if (cabeza->y == 1) break;
+        cabeza->y--;
+        gotoxy(cabeza->x, cabeza->y);
+        printf("x");
+    }
+    
+    gotoxy(cabeza->x, cabeza->y);
+    printf(" ");
+    gotoxy(cabeza->x, cabeza->y);
+    printf("x");
+
+    while (cabeza->y < 18) {
+        Sleep(40);
+        gotoxy(cabeza->x, cabeza->y);
+        printf(" ");
+        if (cabeza->x != 1) cabeza->x--;
+        if (cabeza->y != 18) cabeza->y++;
+        gotoxy(cabeza->x, cabeza->y);
+        printf("x");
+    }
+}
+
+void saltoVertical(Pixel *cabeza)
 {
+  int alturaMax = cabeza->y - 4;
+
+  while(cabeza->y > alturaMax)
+  {
+    Sleep(40);
+    gotoxy(cabeza->x, cabeza->y);
+    printf(" ");
+    if (cabeza->y == 1) break;
+    cabeza->y--;
+    gotoxy(cabeza->x, cabeza->y);
+    printf("x");
+  }
+
+  while(cabeza->y < alturaMax + 4)
+  {
+    Sleep(40);
+    gotoxy(cabeza->x, cabeza->y);
+    printf(" ");
+    if (cabeza->y == 1) break;
+    cabeza->y++;
+    gotoxy(cabeza->x, cabeza->y);
+    printf("x");
+  }
+}
+
+void movimiento(Pixel *user) {
     if (GetAsyncKeyState(LEFT))
-        if (user->x != 1) user->x--;
-    if (GetAsyncKeyState(RIGTH))
-        if (user->x != 63) user->x++;
+        if (GetAsyncKeyState(SPACE)) saltoIzquierda(user);
+        else if (user->x != 1) user->x--;
+    if (GetAsyncKeyState(RIGTH)) {
+        if (GetAsyncKeyState(SPACE)) saltoDerecha(user);
+        else if (user->x != 63) user->x++;
+    }
+    if(GetAsyncKeyState(SPACE))
+      saltoVertical(user);
+    /*
     if (GetAsyncKeyState(UP))
         if (user->y != 1) user->y--;
     if (GetAsyncKeyState(DOWN)) 
-        if (user->y != 19) user->y++;
+        if (user->y != 18) user->y++;*/
 }
 
 void nuevaPartida(Pixel* cabeza)
@@ -95,74 +188,6 @@ void nuevaPartida(Pixel* cabeza)
   }
 
 }
-/*
-void mapaMovimiento()
-{
-  Pixel pixel;
-  pixel.x = 10;
-  pixel.y = 10;
-
-  gotoxy(pixel.x, pixel.y);
-  printf("*");
-
-  while(1)
-  {
-    //Limite para el ciclo while
-    Sleep(100);
-    //Movimiento izquierda
-    if(GetAsyncKeyState(0x41))
-    {
-      if(pixel.x != 1)
-      {
-        gotoxy(pixel.x,pixel.y);
-        printf(" ");
-        pixel.x--;
-        gotoxy(pixel.x, pixel.y);
-        printf("*");
-      }
-    }
-
-    //Movimiento derecha
-    if(GetAsyncKeyState(0x44))
-    {
-      if(pixel.x != 63)
-      {
-        gotoxy(pixel.x,pixel.y);
-        printf(" ");
-        pixel.x++;
-        gotoxy(pixel.x, pixel.y);
-        printf("*");
-      }
-    }
-
-    //Movimiento arriba
-    if(GetAsyncKeyState(0x57))
-    {
-      if(pixel.y != 2)
-      {
-        gotoxy(pixel.x,pixel.y);
-        printf(" ");
-        pixel.y--;
-        gotoxy(pixel.x, pixel.y);
-        printf("*");
-      }
-    }
-
-    //Movimiento abajo
-    if(GetAsyncKeyState(0x53))
-    {
-      if(pixel.y != 19)
-      {
-        gotoxy(pixel.x,pixel.y);
-        printf(" ");
-        pixel.y++;
-        gotoxy(pixel.x, pixel.y);
-        printf("*");
-      } 
-    }
-  }
-}
-*/
 
 int main ()
 {
@@ -171,7 +196,7 @@ int main ()
 
   opcion = 0;
 
-  while(opcion != 12) 
+  while(opcion != 4) 
   {
     //system("cls");
 
