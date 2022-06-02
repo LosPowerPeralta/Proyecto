@@ -48,73 +48,109 @@ void mostrarEscenario()
   printf("=================================================================\n");
 }
 
-void movimientosPixel(int x, int y)
-{
-  while(1)
-  {
-    Sleep(100);
-
-    if(GetAsyncKeyState(0x41))
-    {
-      if(x != 1)
-      {
-        gotoxy(x,y);
-        printf(" ");
-        x--;
-        gotoxy(x, y);
-        printf("*");
-      }
-    }
-
-    if(GetAsyncKeyState(0x44))
-    {
-      if(x != 63)
-      {
-        gotoxy(x,y);
-        printf(" ");
-        x++;
-        gotoxy(x, y);
-        printf("*");
-      }
-    }
-
-    if(GetAsyncKeyState(0x57))
-    {
-      if(y != 2)
-      {
-        gotoxy(x,y);
-        printf(" ");
-        y--;
-        gotoxy(x, y);
-        printf("*");
-      }
-    }
-
-    if(GetAsyncKeyState(0x53))
-    {
-      if(y != 19)
-      {
-        gotoxy(x,y);
-        printf(" ");
-        y++;
-        gotoxy(x, y);
-        printf("*");
-      } 
-    }
-  }
-}
-
-int main ()
+void mapaMovimiento()
 {
   Pixel pixel;
   pixel.x = 10;
   pixel.y = 10;
 
-  mostrarEscenario();
-  movimientosPixel(pixel.x, pixel.y);
   gotoxy(pixel.x, pixel.y);
   printf("*");
-  
 
-  return 0;
+  while(1)
+  {
+    //Limite para el ciclo while
+    Sleep(100);
+    //Movimiento izquierda
+    if(GetAsyncKeyState(0x41))
+    {
+      if(pixel.x != 1)
+      {
+        gotoxy(pixel.x,pixel.y);
+        printf(" ");
+        pixel.x--;
+        gotoxy(pixel.x, pixel.y);
+        printf("*");
+      }
+    }
+
+    //Movimiento derecha
+    if(GetAsyncKeyState(0x44))
+    {
+      if(pixel.x != 63)
+      {
+        gotoxy(pixel.x,pixel.y);
+        printf(" ");
+        pixel.x++;
+        gotoxy(pixel.x, pixel.y);
+        printf("*");
+      }
+    }
+
+    //Movimiento arriba
+    if(GetAsyncKeyState(0x57))
+    {
+      if(pixel.y != 2)
+      {
+        gotoxy(pixel.x,pixel.y);
+        printf(" ");
+        pixel.y--;
+        gotoxy(pixel.x, pixel.y);
+        printf("*");
+      }
+    }
+
+    //Movimiento abajo
+    if(GetAsyncKeyState(0x53))
+    {
+      if(pixel.y != 19)
+      {
+        gotoxy(pixel.x,pixel.y);
+        printf(" ");
+        pixel.y++;
+        gotoxy(pixel.x, pixel.y);
+        printf("*");
+      } 
+    }
+    
+  }
+}
+
+
+int main ()
+{
+  int opcion;
+  opcion = 0;
+
+  while(opcion != 12) 
+  {
+    //system("cls");
+
+    printf("\n========== NACHITO BROS ==========\n");
+    printf("(1) NUEVA PARTIDA");
+    printf("(2) CARGAR PARTIDA");
+    printf("(3) OPCIONES");
+    printf("(4) SALIR DEL JUEGO");
+
+    printf("\nINGRESE SU OPCION: ");
+    fflush(stdin);
+    scanf("%i", &opcion);
+
+    switch(opcion)
+    {
+      case 1:
+        nuevaPartida();
+        break;
+      /*case 2:
+        cargarPartida();
+        break;
+      case 3:
+        opcionesJuego();
+        break;*/
+      case 4:
+        return 0;
+    }
+  }
+
+  return EXIT_SUCCESS;
 }
