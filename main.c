@@ -1,5 +1,11 @@
 #include <stdio.h>
 #include <windows.h>
+#include <stdbool.h>
+#define RIGTH 0x44
+#define LEFT 0x41
+#define UP 0x57
+#define DOWN 0x53
+#define SPACE VK_BACK
 /*
 Derecha(D) = 0x44
 izquierda(A) = 0x41
