@@ -6,7 +6,7 @@ izquierda(A) = 0x41
 arriba(W) =   0x57
 abajo(S) = 0x53
 espacio( ) =  VK_BACK
-.\prototipo1.exe
+.\proyecto.exe
 */
 typedef struct
 {
@@ -112,7 +112,7 @@ void mapaMovimiento()
         printf("*");
       } 
     }
-    
+
   }
 }
 
@@ -127,10 +127,10 @@ int main ()
     //system("cls");
 
     printf("\n========== NACHITO BROS ==========\n");
-    printf("(1) NUEVA PARTIDA");
-    printf("(2) CARGAR PARTIDA");
-    printf("(3) OPCIONES");
-    printf("(4) SALIR DEL JUEGO");
+    printf("(1) NUEVA PARTIDA\n");
+    printf("(2) CARGAR PARTIDA\n");
+    printf("(3) OPCIONES\n");
+    printf("(4) SALIR DEL JUEGO\n");
 
     printf("\nINGRESE SU OPCION: ");
     fflush(stdin);
@@ -138,10 +138,11 @@ int main ()
 
     switch(opcion)
     {
+      /*
       case 1:
         nuevaPartida();
         break;
-      /*case 2:
+      case 2:
         cargarPartida();
         break;
       case 3:
