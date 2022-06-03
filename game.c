@@ -24,7 +24,7 @@ typedef struct {
 typedef struct {
     int time;
     bool flag;
-} CountDown;
+} CoolDown;
 
 typedef struct {
     char forma[2];
@@ -75,13 +75,13 @@ Jugador *createJugador() {
     return newPlayer;
 }
 
-CountDown *createTimer() {
-    CountDown *newCountDown = (CountDown *) malloc(sizeof(CountDown));
+CoolDown *createTimer() {
+    CoolDown *newCoolDown = (CoolDown *) malloc(sizeof(CoolDown));
 
-    newCountDown->time = 100;
-    newCountDown->flag = false;
+    newCoolDown->time = 100;
+    newCoolDown->flag = false;
 
-    return newCountDown;
+    return newCoolDown;
 }
 
 void imprimirDisparo(List *proyectiles) {
@@ -204,7 +204,7 @@ void createBala(Coordenadas *pos, List *proyectiles) {
     pushBack(proyectiles, bala);
 }
 
-void movimiento(Jugador *player, List *proyectiles, CountDown *CDshoot) {
+void movimiento(Jugador *player, List *proyectiles, CoolDown *CDshoot) {
     Coordenadas *pos = player->posicion;
 
     if (kbhit()) {
@@ -242,7 +242,7 @@ int main() {
     Jugador *player = createJugador(); 
     Jugador *auxPlayer = createJugador();
     List *proyectiles = createList();
-    CountDown *CDshoot = createTimer();
+    CoolDown *CDshoot = createTimer();
 
     system("cls");
     mostrarEscenario();
