@@ -2,32 +2,31 @@
 #include <windows.h>
 #include <conio.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdbool.h>
-#include "list.c"
+#include "lib\list.c"
+#include "lib\graphics.h"
+#define SALTO_MAX 6
 #define RIGTH 0x44
 #define LEFT 0x41
-#define ESQUINA_SI 201
-#define ESQUINA_SD 187
-#define ESQUINA_II 200
-#define ESQUINA_ID 188
-#define BASE 205
 #define ALTURA 186
 #define SPACE 0x20
 #define SHIFT 0x10
-#define FPS 16
+#define BALA 175
+#define FACE 154
+#define FACE_SHOOT 153
+#define ENEMIES 159
+#define TORRETA_R 195
+#define TORRETA_L 180
+#define TORRETA_U 193
+#define TORRETA_D 194
 
 //Para compilar usar gcc game.c -lwinmm
 
 typedef struct {
-    int x;
-    int y;
-} Coordenadas;
-
-typedef struct {
+    int X;
+    int Y;
     char forma;
-    Coordenadas pos;
-} Bullet;
+} Pixel;
 
 typedef struct {
     int time;
@@ -35,255 +34,194 @@ typedef struct {
 } CoolDown;
 
 typedef struct {
-    char forma[2];
+    Pixel *info;
+    int health;
+    bool havePistol;
+    int direccion;
+} Player;
+
+typedef struct {
     CoolDown *CDshoot;
-    Coordenadas *posicion;
-} Jugador;
+    Pixel *info;
+    int direccion;
+    List *balas;
+} Torretas;
 
-void mostrarEscenario() {
-    int cont = 0;
+typedef struct {
+    Pixel *info;
+    int limiteS;
+    int limiteI;
+    int direccion;
+} Enemies;
 
-    printf("%c", ESQUINA_SI);
-    for (cont = 0; cont < 63; cont++) {
-        printf("%c", BASE);
+int hexToDecimal(char *hex) {
+    size_t decimal = 0;
+    size_t base = 1;
+    int i = 0;
+    int size;
+
+    size = strlen(hex);
+    for(i = size--; i >= 0; i--) {
+        if(hex[i] >= '0' && hex[i] <= '9') {
+            decimal += (hex[i] - 48) * base;
+            base *= 16;
+        }
+        else if(hex[i] >= 'A' && hex[i] <= 'F') {
+            decimal += (hex[i] - 55) * base;
+            base *= 16;
+        }
+        else if(hex[i] >= 'a' && hex[i] <= 'f') {
+            decimal += (hex[i] - 87) * base;
+            base *= 16;
+        }
     }
-    printf("%c\n", ESQUINA_SD);
-
-    for (cont = 0; cont < 18; cont++) {
-        printf("%c%64c\n", ALTURA, ALTURA);
-    }
-
-    printf("%c", ESQUINA_II);
-    for (cont = 0; cont < 63; cont++) {
-        printf("%c", BASE);
-    }
-    printf("%c", ESQUINA_ID);
+    return decimal;
 }
 
-void gotoxy(int x, int y) {
-    HANDLE consola = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD pos;
+Pixel *createPixel(int X, int Y, char forma) {
+    Pixel *newPixel = (Pixel *) malloc(sizeof(Pixel));
 
-    pos.X = x;
-    pos.Y = y;
+    newPixel->forma = forma;
+    newPixel->X = X;
+    newPixel->Y = Y;
 
-    SetConsoleCursorPosition(consola, pos);
+    return newPixel;
 }
 
-void ocultarCursor() {
-    HANDLE consola = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_CURSOR_INFO cursor;
+CoolDown *createCoolDown(int time) {
+    CoolDown *newCoolDown = (CoolDown *) malloc(sizeof(CoolDown));
 
-    cursor.bVisible = FALSE;
-    cursor.dwSize = 50;
-    SetConsoleCursorInfo(consola, &cursor);
+    newCoolDown->flag = false;
+    newCoolDown->time = time;
+
+    return newCoolDown;
 }
 
-CoolDown *createTimer() {
-    CoolDown *newCountDown = (CoolDown *) malloc(sizeof(CoolDown));
+Player *createPlayer() {
+    Player *newPlayer = (Player *) malloc(sizeof(Player));
 
-    newCountDown->time = 100;
-    newCountDown->flag = false;
-
-    return newCountDown;
-}
-
-Jugador *createJugador() {
-    Jugador *newPlayer = (Jugador *) malloc(sizeof(Jugador));
-
-    strcpy(newPlayer->forma, ":D");  
-    newPlayer->posicion = (Coordenadas *) malloc(sizeof(Coordenadas));
-    newPlayer->posicion->x = 2;
-    newPlayer->posicion->y = 2;
-    newPlayer->CDshoot = createTimer();
-
+    newPlayer->direccion = hexToDecimal("0x44");
+    newPlayer->havePistol = false;
+    newPlayer->health = 3;
+    newPlayer->info = createPixel(1, 22, FACE);
+    
     return newPlayer;
 }
 
-void countDownHabilities(CoolDown *CD) {
-    if (CD->time == 100) {
-        gotoxy(78,1);
-        printf("   ");
-        CD->time = 0;
-        CD->flag = false;
-    }
-    if (CD->flag == true) CD->time++;
-    gotoxy(65,1);
-    printf("Count Down = %d", CD->time);
+Torretas *createTorretas(int X, int Y, char *direccion, int time) {
+    Torretas *newTorretas = (Torretas *) malloc(sizeof(Torretas));
+    char forma;
+    int direccionD;
+
+    direccionD = hexToDecimal(direccion);
+    newTorretas->balas = createList();
+    newTorretas->CDshoot = createCoolDown(time);
+
+    if (direccion == 68) forma = TORRETA_R;
+    if (direccion == 65) forma = TORRETA_L;
+    if (direccion == 83) forma = TORRETA_D;
+    if (direccion == 87) forma = TORRETA_U;
+
+    newTorretas->direccion = direccionD;
+    newTorretas->info = createPixel(X, Y, forma);
+
+    return newTorretas;
 }
 
-void imprimirDisparo(List *proyectiles) {
-    Bullet *proyectil;
+Enemies *createEnemies(int X, int Y, int limiteS, int limiteI) {
+    Enemies *newEnemies = (Enemies *) malloc(sizeof(Enemies));
+
+    newEnemies->direccion = hexToDecimal(LEFT);
+    newEnemies->info = createPixel(X, Y, ENEMIES);
+    newEnemies->limiteI = limiteI;
+    newEnemies->limiteS = limiteS;
+
+    return newEnemies;
+}
+
+void createBullet(int X, int Y, List *balas) {
+    Pixel *newBala = createPixel(X, Y, BALA);
+
+    pushBack(balas, newBala);
+}
+
+void salto(Pixel *pos, int tipo) {
+    int alturaMax = pos->Y - SALTO_MAX;
+
+    while (pos->Y > alturaMax) {
+        Sleep(FPS);
+        gotoxy(pos->X, pos->Y);
+        printf(" ");
+        if (tipo == 1 && pos->X != 117) pos->X++;
+        if (tipo == 2 && pos->X != 1) pos->X--;
+        if (pos->Y == 1) break;
+        pos->Y--;
+        gotoxy(pos->X, pos->Y);
+        printf("%c", pos->forma);
+    }
+
+    gotoxy(pos->X, pos->Y);
+    printf(" ");
+    if (tipo == 1 && pos->X != 117) pos->X++;
+    if (tipo == 2 && pos->X != 1) pos->X--;
+    gotoxy(pos->X, pos->Y);
+    printf("%c", pos->forma);
     
-    firstList(proyectiles);
-
-    while ((proyectil = (Bullet *)nextList(proyectiles)) != NULL) {
-        if (proyectil->pos.x == 63) {
-            popCurrent(proyectiles);
-            gotoxy(proyectil->pos.x, proyectil->pos.y);
-            printf(" ");
-        }
-        else {
-            gotoxy(proyectil->pos.x, proyectil->pos.y);
-            printf(" ");
-            proyectil->pos.x++;
-            gotoxy(proyectil->pos.x, proyectil->pos.y);
-            printf("%c", proyectil->forma);
-        }
+    while (pos->Y < 27) {
+        Sleep(FPS);
+        gotoxy(pos->X, pos->Y);
+        printf(" ");
+        if (tipo == 1 && pos->X != 117) pos->X++;
+        if (tipo == 2 && pos->X != 1) pos->X--;
+        if (pos->Y == 27) break;
+        pos->Y++;
+        gotoxy(pos->X, pos->Y);
+        printf("%c", pos->forma);
     }
 }
 
-void saltoDerecha(Coordenadas *pos, List *proyectiles, CoolDown *CD) {
-    int alturaMax = pos->y - 4; 
+void movimientoLateral(Player *jugador) {
+    Pixel *pos = jugador->info;
 
-    while (pos->y > alturaMax) {
-        Sleep(FPS);
-        imprimirDisparo(proyectiles);
-        countDownHabilities(CD);
-        gotoxy(pos->x, pos->y);
-        printf("  ");
-        if (pos->x != 63) pos->x++;
-        if (pos->y == 1) break;
-        pos->y--;
-        gotoxy(pos->x, pos->y);
-        printf(":D");
-    }
-    
-    gotoxy(pos->x, pos->y);
-    printf("  ");
-    gotoxy(pos->x, pos->y);
-    printf(":D");
-
-    while (pos->y < 18) {
-        Sleep(FPS);
-        imprimirDisparo(proyectiles);
-        countDownHabilities(CD);
-        gotoxy(pos->x, pos->y);
-        printf("  ");
-        if (pos->x != 63) pos->x++;
-        if (pos->y != 18) pos->y++;
-        gotoxy(pos->x, pos->y);
-        printf(":D");
-    }
-}
-
-void saltoIzquierda(Coordenadas *pos, List *proyectiles, CoolDown *CD) {
-    int alturaMax = pos->y - 4; 
-
-    while (pos->y > alturaMax) {
-        Sleep(FPS);
-        imprimirDisparo(proyectiles);
-        countDownHabilities(CD);
-        gotoxy(pos->x, pos->y);
-        printf("  ");
-        if (pos->x != 1) pos->x--;
-        if (pos->y == 1) break;
-        pos->y--;
-        gotoxy(pos->x, pos->y);
-        printf(":D");
-    }
-    
-    gotoxy(pos->x, pos->y);
-    printf("  ");
-    gotoxy(pos->x, pos->y);
-    printf(":D");
-
-    while (pos->y < 18) {
-        Sleep(FPS);
-        imprimirDisparo(proyectiles);
-        countDownHabilities(CD);
-        gotoxy(pos->x, pos->y);
-        printf("  ");
-        if (pos->x != 1) pos->x--;
-        if (pos->y != 18) pos->y++;
-        gotoxy(pos->x, pos->y);
-        printf(":D");
-    }
-}
-
-void saltoVertical(Coordenadas *pos, List *proyectiles, CoolDown *CD) {
-    int alturaMax = pos->y - 4;
-
-    while (pos->y > alturaMax) {
-        Sleep(FPS);
-        imprimirDisparo(proyectiles);
-        countDownHabilities(CD);
-        gotoxy(pos->x, pos->y);
-        printf("  ");
-        if (pos->y == 1) break;
-        pos->y--;
-        gotoxy(pos->x, pos->y);
-        printf(":D");
-    }
-    
-    while (pos->y < alturaMax + 4) {
-        Sleep(FPS);
-        imprimirDisparo(proyectiles);
-        countDownHabilities(CD);
-        gotoxy(pos->x, pos->y);
-        printf("  ");
-        pos->y++;
-        gotoxy(pos->x, pos->y);
-        printf(":D");
-    }
-}
-
-void createBala(Coordenadas *pos, List *proyectiles) {
-    Bullet *bala = (Bullet *) malloc(sizeof(Bullet));
-
-    bala->forma = '-';
-    bala->pos.x = pos->x;
-    bala->pos.y = pos->y;
-    sndPlaySound("SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
-    pushBack(proyectiles, bala);
-}
-
-void movimiento(Jugador *player, List *proyectiles) {
-    Coordenadas *pos = player->posicion;
-    CoolDown *CDshoot = player->CDshoot;
-
-    fflush(stdin);
     if (kbhit()) {
-        if (GetAsyncKeyState(LEFT)) {
-            if (GetAsyncKeyState(SPACE)) saltoIzquierda(pos, proyectiles, CDshoot);
-            else if (pos->x != 1) pos->x--;
-        }
-        if (GetAsyncKeyState(RIGTH)) {
-            if (GetAsyncKeyState(SPACE)) saltoDerecha(pos, proyectiles, CDshoot);
-            else if (pos->x != 62) pos->x++;
-        }
-        if (GetAsyncKeyState(SPACE)) saltoVertical(pos, proyectiles, CDshoot);
+        if (GetAsyncKeyState(RIGTH)) 
+            if (pos->X != 117) pos->X++;
+        if (GetAsyncKeyState(LEFT)) 
+            if(pos->X != 1) pos->X--;
     }
-    if (kbhit()) {
-        if (CDshoot->flag == false) 
-            if (GetAsyncKeyState(SHIFT)) {
-                createBala(pos, proyectiles);
-                CDshoot->flag = true;
-            }
-    }
-
-    countDownHabilities(CDshoot);
-    imprimirDisparo(proyectiles);
 }
 
-int main() {
-    Jugador *player = createJugador(); 
-    Jugador *auxPlayer = createJugador();
-    List *proyectiles = createList();
+void movimientoVertical(Player *jugador) {
+    Pixel *pos = jugador->info;
+
+    if (kbhit()) {
+        if (GetAsyncKeyState(RIGTH) && GetAsyncKeyState(SPACE)) salto(pos, 1);
+        else if (GetAsyncKeyState(LEFT) && GetAsyncKeyState(SPACE)) salto(pos, 2);
+        else if (GetAsyncKeyState(SPACE)) salto(pos, 0);
+    }
+}
+
+int main () {
+    Player *jugador = createPlayer();
+    //List *obstaculos = createList();
+    //List *torretas = createList();
 
     system("cls");
     ocultarCursor();
     mostrarEscenario();
-    gotoxy(player->posicion->x, player->posicion->y);
-    printf("%c", player->forma);
+    gotoxy(jugador->info->X, jugador->info->Y);
+    printf("%c", jugador->info->forma);
 
     while (true) {
         Sleep(FPS);
-        auxPlayer = player;
-        gotoxy(auxPlayer->posicion->x, auxPlayer->posicion->y);
-        printf("  ");
-        movimiento(player, proyectiles);
-        gotoxy(player->posicion->x, player->posicion->y);
-        printf("%s", player->forma);
+        gotoxy(jugador->info->X, jugador->info->Y);
+        printf(" ");
+        movimientoLateral(jugador);
+        movimientoVertical(jugador);
+        gotoxy(jugador->info->X, jugador->info->Y);
+        printf("%c", jugador->info->forma);
     }
+
+    return EXIT_SUCCESS;
 }
+
