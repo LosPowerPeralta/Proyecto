@@ -8,34 +8,52 @@
 #define BASE 205
 #define ALTURA 186
 #define FPS 16
+#define BALA_D 175      // »
+#define BALA_I 174      // « 
+#define BALA_A 94       // ^
+#define FACE 154        // Ü
+#define FACE_SHOOT 153  // Ö
+#define ENEMIES 159     // ƒ
+#define TORRETA_R 195   // ├
+#define TORRETA_L 180   // ┤
+#define TORRETA_U 193   // ┴
+#define TORRETA_D 194   // ┬
+#define PINCHOS 65      // A
 
 typedef struct{
-    int X;
-    int Y;
-} Coordenadas;
+    int limiteX_I;
+    int limiteX_S;
+    int limiteY_I;
+    int limiteY_S;
+} Limites;
 
 typedef struct{
-    Coordenadas pos;
-    char forma[1];
-    int limiteS;
-    int limiteI;
+    Limites *limits;
+    int tipo;
 } Obstaculo;
 
-Obstaculo *createObstaculo(int X, int Y, int limiteS, int limiteI, char *forma) {
-    Obstaculo *newObstaculo = (Obstaculo *) malloc(sizeof(Obstaculo));
+Limites *createLimites(int limiteX_I, int limiteX_S, int limiteY_I, int limiteY_S) {
+    Limites *newLimites = (Limites *) malloc(sizeof(Limites));
 
-    strcpy(newObstaculo->forma, forma);
-    newObstaculo->limiteI = limiteI;
-    newObstaculo->limiteS = limiteS;
-    newObstaculo->pos.X = X;
-    newObstaculo->pos.Y = Y;
+    newLimites->limiteX_I = limiteX_I;
+    newLimites->limiteX_S = limiteX_S;
+    newLimites->limiteY_I = limiteY_I;
+    newLimites->limiteY_S = limiteY_S;
+
+    return newLimites;
+}
+
+Obstaculo *createObstaculo(Limites *limits, int tipo) {
+    Obstaculo *newObstaculo = (Obstaculo *) malloc(sizeof(Obstaculo));
+    newObstaculo->tipo = tipo;
+    newObstaculo->limits = limits;
 
     return newObstaculo;
 }
 
 void mostrarEscenario() {
     int cont = 0;
-
+    
     printf("%c", ESQUINA_SI);
     for (cont = 0; cont < 117; cont++) {
         printf("%c", BASE);
@@ -71,4 +89,3 @@ void ocultarCursor() {
     cursor.dwSize = 50;
     SetConsoleCursorInfo(consola, &cursor);
 }
-
