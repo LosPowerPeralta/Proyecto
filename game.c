@@ -5,22 +5,17 @@
 #include <stdbool.h>
 #include "lib\list.c"
 #include "lib\graphics.h"
-#define SALTO_MAX 6
-#define RIGTH 0x44
+#include "lib\operadores.h"
+#define UP 0x57
+#define DOWN 0x53
+#define RIGHT 0x44
 #define LEFT 0x41
 #define ALTURA 186
 #define SPACE 0x20
 #define SHIFT 0x10
-#define BALA 175        // »
-#define FACE 154        // Ü
-#define FACE_SHOOT 153  // Ö
-#define ENEMIES 159     // ƒ
-#define TORRETA_R 195   // ├
-#define TORRETA_L 180   // ┤
-#define TORRETA_U 193   // ┴
-#define TORRETA_D 194   // ┬
+#define SALTO_MAX 6
 
-//Para compilar usar gcc game.c -lwinmm
+//Para compilar usar gcc game.c -o game -lwinmm
 
 typedef struct {
     int X;
@@ -35,6 +30,12 @@ typedef struct {
 
 typedef struct {
     Pixel *info;
+    int direccion;
+} Bullet;
+
+typedef struct {
+    Pixel *info;
+    List *balas;
     int health;
     bool havePistol;
     int direccion;
@@ -53,36 +54,6 @@ typedef struct {
     int limiteI;
     int direccion;
 } Enemies;
-
-
-/************* | hexToDecimal() | **************/
-/* El proposito de esta función es convertir   *
- * un codigo hexadecimal en decimal.           *
- * Recibe una cadena con el codigo hexadecimal.*
- * Retorna el codigo en su forma decimal.      */
-int hexToDecimal(char *hex) {
-    size_t decimal = 0;
-    size_t base = 1;
-    int i = 0;
-    int size;
-
-    size = strlen(hex);
-    for(i = size--; i >= 0; i--) {
-        if(hex[i] >= '0' && hex[i] <= '9') {
-            decimal += (hex[i] - 48) * base;
-            base *= 16;
-        }
-        else if(hex[i] >= 'A' && hex[i] <= 'F') {
-            decimal += (hex[i] - 55) * base;
-            base *= 16;
-        }
-        else if(hex[i] >= 'a' && hex[i] <= 'f') {
-            decimal += (hex[i] - 87) * base;
-            base *= 16;
-        }
-    }
-    return decimal;
-}
 
 /***************** | createPixel() | ****************/
 /* El proposito de esta función es crear una        *
@@ -116,6 +87,24 @@ CoolDown *createCoolDown(int time) {
     return newCoolDown;
 }
 
+/**************** | createBullet() | ***************/
+/* El proposito de esta función es crear una bala  *
+ * y añadirla en una lista.                        *
+ * Recibe la posición inicial de la bala y una     *
+ * lista en donde estará guardada.                 *
+ * No retorna valores.                             */
+void *createBullet(int X, int Y, int direccion, List *balas) {
+    Bullet *newBullet = (Bullet *) malloc(sizeof(Bullet));
+
+    newBullet->direccion = direccion;
+
+    if (direccion == RIGHT) newBullet->info = createPixel(X, Y, BALA_D);
+    if (direccion == LEFT) newBullet->info = createPixel(X, Y, BALA_I);
+    if (direccion == UP) newBullet->info = createPixel(X, Y, BALA_A);
+
+    pushBack(balas, newBullet);
+}
+
 /****************** | createPlayer() | *****************/ 
 /* El proposito de esta función es crear una variable  *
  * tipo Player la cual contiene los datos del jugador. *
@@ -125,10 +114,11 @@ CoolDown *createCoolDown(int time) {
 Player *createPlayer() {
     Player *newPlayer = (Player *) malloc(sizeof(Player));
 
-    newPlayer->direccion = hexToDecimal("0x44");
-    newPlayer->havePistol = false;
+    newPlayer->direccion = RIGHT;
+    newPlayer->havePistol = true;
     newPlayer->health = 3;
     newPlayer->info = createPixel(1, 22, FACE);
+    newPlayer->balas = createList();
     
     return newPlayer;
 }
@@ -140,21 +130,19 @@ Player *createPlayer() {
  * Recibe las coordenadas de la torreta, su dirección    *
  * y el tiempo entre cada disparo.                       *
  * Retorna la dirección de memoria de la nueva variable. */
-Torretas *createTorretas(int X, int Y, char *direccion, int time) {
+Torretas *createTorretas(int X, int Y, int direccion, int time) {
     Torretas *newTorretas = (Torretas *) malloc(sizeof(Torretas));
     char forma;
-    int direccionD; //dirección en decimal
 
-    direccionD = hexToDecimal(direccion);
     newTorretas->balas = createList();
     newTorretas->CDshoot = createCoolDown(time);
 
-    if (direccion == 68) forma = TORRETA_R;
-    if (direccion == 65) forma = TORRETA_L;
-    if (direccion == 83) forma = TORRETA_D;
-    if (direccion == 87) forma = TORRETA_U;
+    if (direccion == RIGHT) forma = TORRETA_R;
+    if (direccion == LEFT) forma = TORRETA_L;
+    if (direccion == DOWN) forma = TORRETA_D;
+    if (direccion == UP) forma = TORRETA_U;
 
-    newTorretas->direccion = direccionD;
+    newTorretas->direccion = direccion;
     newTorretas->info = createPixel(X, Y, forma);
 
     return newTorretas;
@@ -170,7 +158,7 @@ Torretas *createTorretas(int X, int Y, char *direccion, int time) {
 Enemies *createEnemies(int X, int Y, int limiteS, int limiteI) {
     Enemies *newEnemies = (Enemies *) malloc(sizeof(Enemies));
 
-    newEnemies->direccion = hexToDecimal(LEFT);
+    newEnemies->direccion = LEFT;
     newEnemies->info = createPixel(X, Y, ENEMIES);
     newEnemies->limiteI = limiteI;
     newEnemies->limiteS = limiteS;
@@ -178,16 +166,103 @@ Enemies *createEnemies(int X, int Y, int limiteS, int limiteI) {
     return newEnemies;
 }
 
-/**************** | createBullet() | ***************/
-/* El proposito de esta función es crear una bala  *
- * y añadirla en una lista.                        *
- * Recibe la posición inicial de la bala y una     *
- * lista en donde estará guardada.                 *
- * No retorna valores.                             */
-void createBullet(int X, int Y, List *balas) {
-    Pixel *newBala = createPixel(X, Y, BALA);
+void leerArchivo(List *enemies) {
+    FILE *archivo = fopen("csv\\enemies.csv", "r");
+    char linea[1024];
+    char X[3];
+    char Y[2];
+    char forma[3];
+    char limiteS[3];
+    char limiteI[3];
+    char direccion[5];
+    Enemies *enemy;
 
-    pushBack(balas, newBala);
+    while (fgets(linea, 1023, archivo) != NULL) {
+        strcpy(X, get_csv_field(linea, 0));
+        strcpy(Y, get_csv_field(linea, 1));
+        strcpy(direccion, get_csv_field(linea, 2));
+        strcpy(limiteI, get_csv_field(linea, 3));
+        strcpy(limiteS, get_csv_field(linea, 4));
+        enemy = createEnemies(toNumber(X), toNumber(Y), toNumber(limiteS), toNumber(limiteI));
+        pushBack(enemies, enemy);
+    }
+
+}
+
+void movimientoEnemigos(List *enemies) {
+    Enemies *enemy = firstList(enemies);
+    Pixel *pos;
+
+    while(enemy != NULL) {
+        pos = enemy->info;
+
+        gotoxy(pos->X, pos->Y);
+        printf(" ");
+        if (enemy->direccion == RIGHT) {
+            if (pos->X != enemy->limiteS) pos->X++;
+            gotoxy(pos->X, pos->Y);
+            printf("%c", pos->forma);
+            if (pos->X == enemy->limiteS) {
+                gotoxy(pos->X, pos->Y);
+                printf(" ");
+                enemy->direccion = LEFT;
+            }
+        }
+        if (enemy->direccion == LEFT) {
+            if (pos->X != enemy->limiteI) pos->X--;
+            gotoxy(pos->X, pos->Y);
+            printf("%c", pos->forma);
+            if (pos->X == enemy->limiteI) {
+                enemy->direccion = RIGHT;
+                gotoxy(pos->X, pos->Y);
+                printf(" ");
+            }
+        }
+        enemy = nextList(enemies);
+    }
+}
+
+void disparo(List *balas) {
+    Bullet *bala;
+
+    bala = (Bullet *)firstList(balas);
+    while (bala != NULL) {
+
+        gotoxy(bala->info->X, bala->info->Y);
+        printf(" ", bala->info->forma);
+        if (bala->direccion == RIGHT) {
+            if (bala->info->X != 117) bala->info->X++;
+            gotoxy(bala->info->X, bala->info->Y);
+            printf("%c", bala->info->forma);
+            if (bala->info->X == 117) {
+                gotoxy(bala->info->X, bala->info->Y);
+                printf(" ");
+                popCurrent(balas);
+            }
+        }
+        if (bala->direccion == LEFT) {
+            if (bala->info->X != 1) bala->info->X--;
+            gotoxy(bala->info->X, bala->info->Y);
+            printf("%c", bala->info->forma);
+            if (bala->info->X == 1) {
+                gotoxy(bala->info->X, bala->info->Y);
+                printf(" ");
+                popCurrent(balas);
+            }
+        }  
+        if (bala->direccion == UP) {
+            if (bala->info->Y != 1) bala->info->Y--;
+            gotoxy(bala->info->X, bala->info->Y);
+            printf("%c", bala->info->forma);
+            if (bala->info->Y == 1) {
+                gotoxy(bala->info->X, bala->info->Y);
+                printf(" ");
+                popCurrent(balas);
+            }
+        }
+        bala = (Bullet *)nextList(balas);
+    }
+
 }
 
 /************** | salto() | **************/
@@ -200,12 +275,14 @@ void createBullet(int X, int Y, List *balas) {
  * tipo = 2 (Salto hacia la izquierda)   *
  * tipo = c/n (salto vertical)           *
  * No retorna valores.                   */ 
-void salto(Pixel *pos, int tipo) {
+void salto(Pixel *pos, int tipo, List *balas, List *enemies) {
     int alturaMax = pos->Y - SALTO_MAX;
 
     //Subida
     while (pos->Y > alturaMax) {
         Sleep(FPS);
+        disparo(balas);
+        movimientoEnemigos(enemies);
         gotoxy(pos->X, pos->Y);
         printf(" ");
         if (tipo == 1 && pos->X != 117) pos->X++;
@@ -226,6 +303,8 @@ void salto(Pixel *pos, int tipo) {
     //Bajada
     while (pos->Y < 27) {
         Sleep(FPS);
+        disparo(balas);
+        movimientoEnemigos(enemies);
         gotoxy(pos->X, pos->Y);
         printf(" ");
         if (tipo == 1 && pos->X != 117) pos->X++;
@@ -246,10 +325,14 @@ void movimientoLateral(Player *jugador) {
     Pixel *pos = jugador->info;
 
     if (kbhit()) {
-        if (GetAsyncKeyState(RIGTH)) 
+        if (GetAsyncKeyState(RIGHT)) {
+            jugador->direccion = RIGHT;
             if (pos->X != 117) pos->X++;
-        if (GetAsyncKeyState(LEFT)) 
+        }
+        if (GetAsyncKeyState(LEFT)) {
+            jugador->direccion = LEFT;
             if(pos->X != 1) pos->X--;
+        }
     }
 }
 
@@ -259,18 +342,35 @@ void movimientoLateral(Player *jugador) {
  * usuario.                                         *
  * Recibe la información del jugador.               *
  * No retorna valores.                              */
-void movimientoVertical(Player *jugador) {
+void movimientoVertical(Player *jugador, List *enemies) {
     Pixel *pos = jugador->info;
 
     if (kbhit()) {
-        if (GetAsyncKeyState(RIGTH) && GetAsyncKeyState(SPACE)) salto(pos, 1);
-        else if (GetAsyncKeyState(LEFT) && GetAsyncKeyState(SPACE)) salto(pos, 2);
-        else if (GetAsyncKeyState(SPACE)) salto(pos, 0);
+        if (GetAsyncKeyState(RIGHT) && GetAsyncKeyState(SPACE)) salto(pos, 1, jugador->balas, enemies);
+        else if (GetAsyncKeyState(LEFT) && GetAsyncKeyState(SPACE)) salto(pos, 2, jugador->balas, enemies);
+        else if (GetAsyncKeyState(SPACE)) salto(pos, 0, jugador->balas, enemies);
     }
+}
+
+void acciones(Player *jugador, List *enemies) {
+    Pixel *pos = jugador->info;
+
+    movimientoLateral(jugador);
+    movimientoVertical(jugador, enemies);
+    if (kbhit()) {
+        if (GetAsyncKeyState(UP)) jugador->direccion = UP;
+        if (GetAsyncKeyState(SHIFT)) {
+            createBullet(pos->X, pos->Y, jugador->direccion, jugador->balas);
+            sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
+        }
+    }   
+    disparo(jugador->balas);
 }
 
 int main () {
     Player *jugador = createPlayer();
+    List *enemies = createList();
+    leerArchivo(enemies);
     //List *obstaculos = createList();
     //List *torretas = createList();
 
@@ -284,12 +384,11 @@ int main () {
         Sleep(FPS);
         gotoxy(jugador->info->X, jugador->info->Y);
         printf(" ");
-        movimientoLateral(jugador);
-        movimientoVertical(jugador);
+        acciones(jugador, enemies);
+        movimientoEnemigos(enemies);
         gotoxy(jugador->info->X, jugador->info->Y);
         printf("%c", jugador->info->forma);
     }
 
     return EXIT_SUCCESS;
 }
-
