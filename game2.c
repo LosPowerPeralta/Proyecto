@@ -127,7 +127,31 @@ Enemies *createEnemies(int X, int Y, int limiteS, int limiteI) {
     return newEnemies;
 }
 
-void leerArchivo(List *enemies) {
+void leerArchivoObstaculos(List *obstaculos) {
+    FILE *archivo = fopen("csv\\obstaculos.csv", "r");
+    char linea[1024];
+    int limiteX_S;
+    int limiteX_I;
+    int limiteY_S;
+    int limiteY_I;
+    int tipo;
+    Limites *limits;
+    Obstaculo *obstacle;
+
+    fgets(linea, 1023, archivo);
+    while (fgets(linea, 1023, archivo) != NULL) {
+        limiteX_I = toNumber((char *)get_csv_field(linea, 0));
+        limiteX_S = toNumber((char *)get_csv_field(linea, 1));
+        limiteY_S = toNumber((char *)get_csv_field(linea, 2));
+        limiteY_I = toNumber((char *)get_csv_field(linea, 3));
+        tipo = toNumber((char *)get_csv_field(linea, 4));
+        limits = createLimites(limiteX_I, limiteX_S, limiteY_I, limiteY_S);
+        obstacle = createObstaculo(limits, tipo);
+        pushBack(obstaculos, obstacle);
+    }
+}
+
+void leerArchivoEnemies(List *enemies) {
     FILE *archivo = fopen("csv\\enemies.csv", "r");
     char linea[1024];
     char X[3];
@@ -138,6 +162,7 @@ void leerArchivo(List *enemies) {
     char direccion[5];
     Enemies *enemy;
 
+    fgets(linea, 1023, archivo);
     while (fgets(linea, 1023, archivo) != NULL) {
         strcpy(X, get_csv_field(linea, 0));
         strcpy(Y, get_csv_field(linea, 1));
@@ -148,6 +173,47 @@ void leerArchivo(List *enemies) {
         pushBack(enemies, enemy);
     }
 
+}
+
+void mostrarObstaculos(List *obstaculos) {
+    Obstaculo *obstacle = firstList(obstaculos);
+    Limites *limits;
+    Pixel pos;
+
+    while (obstacle != NULL) {
+        limits = obstacle->limits;
+        for (pos.X = limits->limiteX_I; pos.X < limits->limiteX_S; pos.X++) {
+            gotoxy(pos.X, limits->limiteY_S);
+            if(obstacle->tipo == 1) printf("%c", BASE);
+            if(obstacle->tipo == 2) printf("%c", PINCHOS);
+        }
+        if(obstacle->tipo == 1) {
+            pos.X = limits->limiteX_I - 1;
+            gotoxy(pos.X, limits->limiteY_S);
+            printf("%c", ESQUINA_SI);
+            for (pos.Y = limits->limiteY_S + 1; pos.Y < limits->limiteY_I; pos.Y++) {
+                gotoxy(pos.X, pos.Y);
+                printf("%c", ALTURA);
+            }
+            gotoxy(pos.X, pos.Y);
+            printf("%c", ESQUINA_II);
+        
+            for (pos.X = limits->limiteX_I; pos.X < limits->limiteX_S; pos.X++) {
+                gotoxy(pos.X, pos.Y);
+                if(obstacle->tipo == 1) printf("%c", BASE);
+                if(obstacle->tipo == 2) printf("%c", PINCHOS);
+            }
+            gotoxy(pos.X, limits->limiteY_S);
+            printf("%c", ESQUINA_SD);    
+            for (pos.Y = limits->limiteY_S + 1; pos.Y < limits->limiteY_I; pos.Y++) {
+                gotoxy(pos.X, pos.Y);
+                printf("%c", ALTURA);
+            }
+            gotoxy(pos.X, pos.Y);
+            printf("%c", ESQUINA_ID);
+        }
+        obstacle = nextList(obstaculos);
+    }
 }
 
 void movimientoEnemigos(List *enemies) {
@@ -313,7 +379,7 @@ void acciones(Player *jugador) {
 
     gotoxy(jugador->info->X, jugador->info->Y);
     printf(" ");
-    movimientoLateral(jugador);
+    if (jugador->jump->existSalto != true) movimientoLateral(jugador);
     movimientoVertical(jugador);
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
@@ -330,14 +396,16 @@ void acciones(Player *jugador) {
 int main () {
     Player *jugador = createPlayer();
     List *enemies = createList(); 
-    //List *obstaculos = createList();
+    List *obstaculos = createList();
     //List *torretas = createList();
 
-    leerArchivo(enemies);
+    leerArchivoEnemies(enemies);
+    leerArchivoObstaculos(obstaculos);
 
     system("cls");
     ocultarCursor();
     mostrarEscenario();
+    mostrarObstaculos(obstaculos);
     PlaySound("sound\\Plants vs Zombies Soundtrack. [Main Menu].wav", NULL, SND_ALIAS | SND_APPLICATION | SND_ASYNC);
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
@@ -350,4 +418,5 @@ int main () {
 
     return EXIT_SUCCESS;
 }
+
 
