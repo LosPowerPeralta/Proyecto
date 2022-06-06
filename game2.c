@@ -42,7 +42,7 @@ typedef struct {
     bool havePistol;
     int direccionH;
     int direccionV;
-    bool gameOver;
+    int gameOver;
     Salto *jump;
 } Player;
 
@@ -107,7 +107,7 @@ Player *createPlayer() {
     newPlayer->direccionH = RIGHT;
     newPlayer->direccionV = DOWN;
     newPlayer->havePistol = true;
-    newPlayer->gameOver = false;
+    newPlayer->gameOver = 0;
     newPlayer->health = 4;
     newPlayer->info = createPixel(2, 18, FACE);
     newPlayer->jump = createSalto();
@@ -199,13 +199,13 @@ bool hitBoxVPlayer() {
         limits = obstacle->limits;
         if (jugador->direccionV == UP) {
             if (pos->Y == limits->limiteY_I && (pos->X >= limits->limiteX_I - 1 && pos->X <= limits->limiteX_S)) {
-                if (obstacle->tipo == 2) jugador->gameOver = true;
+                if (obstacle->tipo == 2) jugador->gameOver = 1;
                 return true;
             }
         }
         if (jugador->direccionV == DOWN) {
             if (pos->Y + 1 == limits->limiteY_S && (pos->X >= limits->limiteX_I - 1 && pos->X <= limits->limiteX_S)) {
-                if (obstacle->tipo == 2) jugador->gameOver = true;
+                if (obstacle->tipo == 2) jugador->gameOver = 1;
                 return true;
             }
         }
@@ -452,9 +452,9 @@ void acciones() {
 
     gotoxy(jugador->info->X, jugador->info->Y);
     printf(" ");
-    if (jugador->jump->existSalto != true) movimientoLateral();
-    printf("%d ", jugador->gameOver);
-    if (jugador->gameOver != true) {
+    if (jugador->gameOver != 1) {
+        if (jugador->jump->existSalto != true) movimientoLateral();
+    
         movimientoVertical();
         gotoxy(jugador->info->X, jugador->info->Y);
         printf("%c", jugador->info->forma);
@@ -473,8 +473,12 @@ void HUD() {
     int cont;
 
     gotoxy(0,30);
+    printf("                                                        ");
+    gotoxy(0,30);
     printf("Vida = ");
-    for (cont = 0; cont < jugador->health; cont++) printf("%c ", FACE);
+    for (cont = 0; cont < jugador->health; cont++) {
+        printf("%c ", FACE);
+    }
     if (jugador->havePistol == false) printf(" Pistol = FALSE");
     if (jugador->havePistol == true) printf(" Pistol = TRUE");
 }
@@ -485,37 +489,38 @@ void GameOver() {
     printf("PERDISTEEEEE!!!!!");
     gotoxy(0,20);
     system("pause");
-    exit(0);
+    main();
+}
+
+void muertePlayer() {
+    jugador->gameOver = 0;
+    jugador->info->X = 2;
+    jugador->info->Y = 18;
+    jugador->health--;
+    if (jugador->health == -1) GameOver();
 }
 
 int main () {
     jugador = createPlayer();
-    Pixel *posI = createPixel(jugador->info->X, jugador->info->Y, FACE);
     enemies = createList();
     obstaculos = createList();
     //List *torretas = createList();
 
-    leerArchivoEnemies(enemies);
-    leerArchivoObstaculos(obstaculos);
+    leerArchivoEnemies();
+    leerArchivoObstaculos();
 
     system("cls");
     ocultarCursor();
     mostrarEscenario();
-    mostrarObstaculos(obstaculos);
+    mostrarObstaculos();
     //PlaySound("sound\\Plants vs Zombies Soundtrack. [Main Menu].wav", NULL, SND_ALIAS | SND_APPLICATION | SND_ASYNC);
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
     while (true) {
-        Sleep(220);
+        Sleep(FPS);
         movimientoEnemigos();
-        acciones(jugador);
-        if (jugador->gameOver == true) {
-            printf("%d ", jugador->gameOver);
-            jugador->gameOver = false;
-            printf("%d", jugador->gameOver);
-            jugador->info = posI;
-            if (jugador->health == -1) GameOver();
-        }
+        acciones();
+        if (jugador->gameOver == 1) muertePlayer();
         HUD();
     }
 
