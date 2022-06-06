@@ -8,9 +8,6 @@
 #define BASE 205        // ═
 #define ALTURA 186      // ║
 #define BALA 184        // ©
-#define BALA_D 175      // »
-#define BALA_I 174      // « 
-#define BALA_A 94       // ^
 #define FACE 154        // Ü
 #define FACE_SHOOT 153  // Ö
 #define ENEMIES 159     // ƒ
@@ -19,6 +16,7 @@
 #define TORRETA_U 193   // ┴
 #define TORRETA_D 194   // ┬
 #define PINCHOS 65      // A
+#define PISTOL 218      // ┌
 #define FPS 25
 
 typedef struct{
