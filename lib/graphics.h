@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <windows.h>
 #include <stdbool.h>
-#define ESQUINA_SI 201
-#define ESQUINA_SD 187
-#define ESQUINA_II 200
-#define ESQUINA_ID 188
-#define BASE 205
-#define ALTURA 186
-#define FPS 16
+#define ESQUINA_SI 201  // ╔
+#define ESQUINA_SD 187  // ╗
+#define ESQUINA_II 200  // ╚
+#define ESQUINA_ID 188  // ╝
+#define BASE 205        // ═
+#define ALTURA 186      // ║
+#define BALA 184        // ©
 #define BALA_D 175      // »
 #define BALA_I 174      // « 
 #define BALA_A 94       // ^
@@ -19,6 +19,7 @@
 #define TORRETA_U 193   // ┴
 #define TORRETA_D 194   // ┬
 #define PINCHOS 65      // A
+#define FPS 25
 
 typedef struct{
     int limiteX_I;
