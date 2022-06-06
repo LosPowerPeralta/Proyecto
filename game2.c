@@ -10,7 +10,7 @@
 #define DOWN 0x53
 #define RIGHT 0x44
 #define LEFT 0x41
-#define ALTURA 186
+#define ESC 0x1B
 #define SPACE 0x20
 #define SHIFT 0x10
 #define SALTO_MAX 6
@@ -51,6 +51,9 @@ typedef struct {
     int direccion;
 } Enemies;
 
+List *enemies; 
+List *obstaculos;
+
 /***************** | createPixel() | ****************/
 /* El proposito de esta función es crear una        *
  * variable tipo Pixel para cada objeto utilizado  *
@@ -71,10 +74,10 @@ void *createBullet(int X, int Y, int direccion, List *balas) {
     Bullet *newBullet = (Bullet *) malloc(sizeof(Bullet));
 
     newBullet->direccion = direccion;
-
-    if (direccion == 68) newBullet->info = createPixel(X, Y, BALA_D);
+    newBullet->info = createPixel(X, Y, BALA);
+    /*if (direccion == 68) newBullet->info = createPixel(X, Y, BALA_D);
     if (direccion == 65) newBullet->info = createPixel(X, Y, BALA_I);
-    if (direccion == 87) newBullet->info = createPixel(X, Y, BALA_A);
+    if (direccion == 87) newBullet->info = createPixel(X, Y, BALA_A);*/
 
     pushBack(balas, newBullet);
 }
@@ -127,7 +130,7 @@ Enemies *createEnemies(int X, int Y, int limiteS, int limiteI) {
     return newEnemies;
 }
 
-void leerArchivoObstaculos(List *obstaculos) {
+void leerArchivoObstaculos() {
     FILE *archivo = fopen("csv\\obstaculos.csv", "r");
     char linea[1024];
     int limiteX_S;
@@ -151,31 +154,37 @@ void leerArchivoObstaculos(List *obstaculos) {
     }
 }
 
-void leerArchivoEnemies(List *enemies) {
+void leerArchivoEnemies() {
     FILE *archivo = fopen("csv\\enemies.csv", "r");
     char linea[1024];
-    char X[3];
-    char Y[2];
-    char forma[3];
-    char limiteS[3];
-    char limiteI[3];
-    char direccion[5];
+    int X;
+    int Y;
+    int forma;
+    int limiteS;
+    int limiteI;
+    int direccion;
     Enemies *enemy;
 
     fgets(linea, 1023, archivo);
     while (fgets(linea, 1023, archivo) != NULL) {
-        strcpy(X, get_csv_field(linea, 0));
-        strcpy(Y, get_csv_field(linea, 1));
-        strcpy(direccion, get_csv_field(linea, 2));
-        strcpy(limiteI, get_csv_field(linea, 3));
-        strcpy(limiteS, get_csv_field(linea, 4));
-        enemy = createEnemies(toNumber(X), toNumber(Y), toNumber(limiteS), toNumber(limiteI));
+        X = toNumber(get_csv_field(linea, 0));
+        Y = toNumber(get_csv_field(linea, 1));
+        direccion = toNumber(get_csv_field(linea, 2));
+        limiteI = toNumber(get_csv_field(linea, 3));
+        limiteS = toNumber(get_csv_field(linea, 4));
+        enemy = createEnemies(X, Y, limiteS, limiteI);
+        printf("%d\n",enemy->info->X);
+        printf("%d\n",enemy->info->Y);
+        printf("%c\n",enemy->info->forma);
+        printf("%c\n", enemy->direccion);
+        printf("%d\n",enemy->limiteI);
+        printf("%d\n\n",enemy->limiteS);
         pushBack(enemies, enemy);
     }
 
 }
 
-void mostrarObstaculos(List *obstaculos) {
+void mostrarObstaculos() {
     Obstaculo *obstacle = firstList(obstaculos);
     Limites *limits;
     Pixel pos;
@@ -201,7 +210,6 @@ void mostrarObstaculos(List *obstaculos) {
             for (pos.X = limits->limiteX_I; pos.X < limits->limiteX_S; pos.X++) {
                 gotoxy(pos.X, pos.Y);
                 if(obstacle->tipo == 1) printf("%c", BASE);
-                if(obstacle->tipo == 2) printf("%c", PINCHOS);
             }
             gotoxy(pos.X, limits->limiteY_S);
             printf("%c", ESQUINA_SD);    
@@ -216,7 +224,7 @@ void mostrarObstaculos(List *obstaculos) {
     }
 }
 
-void movimientoEnemigos(List *enemies) {
+void movimientoEnemigos() {
     Enemies *enemy = firstList(enemies);
     Pixel *pos;
 
@@ -379,24 +387,36 @@ void acciones(Player *jugador) {
 
     gotoxy(jugador->info->X, jugador->info->Y);
     printf(" ");
-    if (jugador->jump->existSalto != true) movimientoLateral(jugador);
+    //if (jugador->jump->existSalto != true) 
+    movimientoLateral(jugador);
     movimientoVertical(jugador);
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
     if (kbhit()) {
+        if (GetAsyncKeyState(ESC)) exit(0);
         if (GetAsyncKeyState(UP)) jugador->direccion = 87;
         if (GetAsyncKeyState(SHIFT)) {
             createBullet(pos->X, pos->Y, jugador->direccion, jugador->balas);
-            sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
+            //sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
         }
     }  
     disparo(jugador->balas);
 }
 
+void HUD(Player *jugador) {
+    int cont;
+
+    //SetConsoleOutputCP(CP_UTF8);
+    gotoxy(0,30);
+    printf("Vida = ");
+    for (cont = 0; cont < jugador->health; cont++) printf("♥");
+
+}
+
 int main () {
     Player *jugador = createPlayer();
-    List *enemies = createList(); 
-    List *obstaculos = createList();
+    enemies = createList();
+    obstaculos = createList();
     //List *torretas = createList();
 
     leerArchivoEnemies(enemies);
@@ -406,17 +426,18 @@ int main () {
     ocultarCursor();
     mostrarEscenario();
     mostrarObstaculos(obstaculos);
-    PlaySound("sound\\Plants vs Zombies Soundtrack. [Main Menu].wav", NULL, SND_ALIAS | SND_APPLICATION | SND_ASYNC);
+    //PlaySound("sound\\Plants vs Zombies Soundtrack. [Main Menu].wav", NULL, SND_ALIAS | SND_APPLICATION | SND_ASYNC);
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
-
     while (true) {
         Sleep(FPS);
-        acciones(jugador);
         movimientoEnemigos(enemies);
+        acciones(jugador);
+        HUD(jugador);
     }
 
     return EXIT_SUCCESS;
 }
+
 
 
