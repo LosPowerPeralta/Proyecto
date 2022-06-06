@@ -40,7 +40,9 @@ typedef struct {
     List *balas;
     int health;
     bool havePistol;
-    int direccion;
+    int direccionH;
+    int direccionV;
+    bool gameOver;
     Salto *jump;
 } Player;
 
@@ -102,15 +104,19 @@ Salto *createSalto() {
 Player *createPlayer() {
     Player *newPlayer = (Player *) malloc(sizeof(Player));
 
-    newPlayer->direccion = hexToDecimal("0x44");
+    newPlayer->direccionH = RIGHT;
+    newPlayer->direccionV = DOWN;
     newPlayer->havePistol = true;
-    newPlayer->health = 3;
-    newPlayer->info = createPixel(1, 22, FACE);
+    newPlayer->gameOver = false;
+    newPlayer->health = 4;
+    newPlayer->info = createPixel(2, 18, FACE);
     newPlayer->jump = createSalto();
     newPlayer->balas = createList();
 
     return newPlayer;
 }
+
+Player *jugador;
 
 /****************** | createEnemies() | ******************/
 /* El proposito de esta función es crear una variable    *
@@ -182,6 +188,55 @@ void leerArchivoEnemies() {
         pushBack(enemies, enemy);
     }
 
+}
+
+bool hitBoxVPlayer() {
+    Pixel *pos = jugador->info;
+    Obstaculo *obstacle = firstList(obstaculos);
+    Limites *limits;
+
+    while(obstacle != NULL) {
+        limits = obstacle->limits;
+        if (jugador->direccionV == UP) {
+            if (pos->Y == limits->limiteY_I && (pos->X >= limits->limiteX_I - 1 && pos->X <= limits->limiteX_S)) {
+                if (obstacle->tipo == 2) jugador->gameOver = true;
+                return true;
+            }
+        }
+        if (jugador->direccionV == DOWN) {
+            if (pos->Y + 1 == limits->limiteY_S && (pos->X >= limits->limiteX_I - 1 && pos->X <= limits->limiteX_S)) {
+                if (obstacle->tipo == 2) jugador->gameOver = true;
+                return true;
+            }
+        }
+
+        obstacle = nextList(obstaculos);
+    }
+    if (jugador->direccionV == DOWN && pos->Y != 27) {
+        jugador->jump->cima = true;
+        jugador->jump->existSalto = true;
+    }
+    return false;
+}
+
+bool hitBoxHPlayer() {
+    Pixel *pos = jugador->info;
+    Obstaculo *obstacle = firstList(obstaculos);
+    Limites *limits;
+
+    //verificacion objetos
+    while (obstacle != NULL) {
+        limits = obstacle->limits;
+        if (jugador->direccionH == LEFT) {
+            if (pos->X - 1 == limits->limiteX_S && (pos->Y <= limits->limiteY_I && pos->Y >= limits->limiteY_S)) return true;
+        }
+        if (jugador->direccionH == RIGHT) {
+            if (pos->X + 1 == limits->limiteX_I - 1 && (pos->Y <= limits->limiteY_I && pos->Y >= limits->limiteY_S)) return true;
+        }
+        obstacle = nextList(obstaculos);
+    }
+
+    return false;
 }
 
 void mostrarObstaculos() {
@@ -267,19 +322,25 @@ void movimientoEnemigos() {
  * tipo = 2 (Salto hacia la izquierda)   *
  * tipo = c/n (salto vertical)           *
  * No retorna valores.                   */ 
-void salto(Pixel *pos, Salto *jump) {
-    if (jump->tipo_salto == 1 && pos->X != 117) pos->X++;
-    if (jump->tipo_salto == 2 && pos->X != 1) pos->X--; 
+void salto() {
+    Salto *jump = jugador->jump;
+    Pixel *pos = jugador->info;
+
+    if ((jump->tipo_salto == 1 && pos->X != 117) && !hitBoxHPlayer()) pos->X++;
+    if ((jump->tipo_salto == 2 && pos->X != 1) && !hitBoxHPlayer()) pos->X--; 
 
     if (jump->cima == false) {
         if (pos->Y != jump->altura_max) pos->Y--;
-        if (pos->Y == jump->altura_max || pos->Y == 1) jump->cima = true;
+        if ((pos->Y == jump->altura_max || pos->Y == 1) || hitBoxVPlayer()) {
+            jump->cima = true;
+            jugador->direccionV = DOWN;
+        }
     }
     if (jump->cima == true) {
-        if (pos->Y != 27) pos->Y++;
-        if (pos->Y == 27) {
+        if (pos->Y != 27 && !hitBoxVPlayer()) pos->Y++;
+        if (pos->Y == 27 || hitBoxVPlayer()) {
             jump->existSalto = false;
-            jump->cima = false;
+            jump->cima = false;     
         }
     }
 }
@@ -289,19 +350,20 @@ void salto(Pixel *pos, Salto *jump) {
  * movimiento de izquierda a derecha del jugador.   *
  * Recibe la información del jugador.               *
  * No retorna valores.                              */
-void movimientoLateral(Player *jugador) {
+void movimientoLateral() {
     Pixel *pos = jugador->info;
 
     if (kbhit()) {
         if (GetAsyncKeyState(RIGHT)) {
-            jugador->direccion = 68;
-            if (pos->X != 117) pos->X++;
+            jugador->direccionH = RIGHT;
+            if (pos->X != 117 && !hitBoxHPlayer()) pos->X++;
         }
         if (GetAsyncKeyState(LEFT)) {
-            jugador->direccion = 65;
-            if(pos->X != 1) pos->X--;
+            jugador->direccionH = LEFT;
+            if(pos->X != 1 && !hitBoxHPlayer()) pos->X--;
         }
     }
+    hitBoxVPlayer();
 }
 
 /************* | movimientoVertical() | *************/
@@ -310,7 +372,7 @@ void movimientoLateral(Player *jugador) {
  * usuario.                                         *
  * Recibe la información del jugador.               *
  * No retorna valores.                              */
-void movimientoVertical(Player *jugador) {
+void movimientoVertical() {
     Pixel *pos = jugador->info;
     Salto *jump = jugador->jump;
 
@@ -320,22 +382,25 @@ void movimientoVertical(Player *jugador) {
             if (GetAsyncKeyState(RIGHT) && GetAsyncKeyState(SPACE)) {
                 jump->tipo_salto = 1;
                 jump->existSalto = true;
-                salto(pos, jump);
+                jugador->direccionV = UP;
+                salto();
             }
             else if (GetAsyncKeyState(LEFT) && GetAsyncKeyState(SPACE)) {
                 jump->tipo_salto = 2;
                 jump->existSalto = true;
-                salto(pos, jump);
+                jugador->direccionV = UP;
+                salto();
             }
             else if (GetAsyncKeyState(SPACE)) {
                 jump->tipo_salto = 0;
                 jump->existSalto = true;
-                salto(pos, jump);
+                jugador->direccionV = UP;
+                salto();
             }
         }
     }
     if (jump->existSalto == true) {
-        salto(pos, jump);
+        salto();
     }
 }
 
@@ -346,7 +411,7 @@ void disparo(List *balas) {
     while (bala != NULL) {
 
         gotoxy(bala->info->X, bala->info->Y);
-        printf(" ", bala->info->forma);
+        printf(" ");
         if (bala->direccion == 68) {
             if (bala->info->X != 117) bala->info->X++;
             gotoxy(bala->info->X, bala->info->Y);
@@ -382,39 +447,50 @@ void disparo(List *balas) {
 
 }
 
-void acciones(Player *jugador) {
+void acciones() {
     Pixel *pos = jugador->info;
 
     gotoxy(jugador->info->X, jugador->info->Y);
     printf(" ");
-    //if (jugador->jump->existSalto != true) 
-    movimientoLateral(jugador);
-    movimientoVertical(jugador);
-    gotoxy(jugador->info->X, jugador->info->Y);
-    printf("%c", jugador->info->forma);
-    if (kbhit()) {
-        if (GetAsyncKeyState(ESC)) exit(0);
-        if (GetAsyncKeyState(UP)) jugador->direccion = 87;
-        if (GetAsyncKeyState(SHIFT)) {
-            createBullet(pos->X, pos->Y, jugador->direccion, jugador->balas);
-            //sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
-        }
-    }  
-    disparo(jugador->balas);
+    if (jugador->jump->existSalto != true) movimientoLateral();
+    printf("%d ", jugador->gameOver);
+    if (jugador->gameOver != true) {
+        movimientoVertical();
+        gotoxy(jugador->info->X, jugador->info->Y);
+        printf("%c", jugador->info->forma);
+        if (kbhit()) {
+            if (GetAsyncKeyState(ESC)) exit(0);
+            if (GetAsyncKeyState(SHIFT)) {
+                createBullet(pos->X, pos->Y, jugador->direccionH, jugador->balas);
+                //sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
+            }
+        }  
+        disparo(jugador->balas);
+    }
 }
 
-void HUD(Player *jugador) {
+void HUD() {
     int cont;
 
-    //SetConsoleOutputCP(CP_UTF8);
     gotoxy(0,30);
     printf("Vida = ");
-    for (cont = 0; cont < jugador->health; cont++) printf("♥");
+    for (cont = 0; cont < jugador->health; cont++) printf("%c ", FACE);
+    if (jugador->havePistol == false) printf(" Pistol = FALSE");
+    if (jugador->havePistol == true) printf(" Pistol = TRUE");
+}
 
+void GameOver() {
+    system("cls");
+    gotoxy(50,10);
+    printf("PERDISTEEEEE!!!!!");
+    gotoxy(0,20);
+    system("pause");
+    exit(0);
 }
 
 int main () {
-    Player *jugador = createPlayer();
+    jugador = createPlayer();
+    Pixel *posI = createPixel(jugador->info->X, jugador->info->Y, FACE);
     enemies = createList();
     obstaculos = createList();
     //List *torretas = createList();
@@ -430,10 +506,17 @@ int main () {
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
     while (true) {
-        Sleep(FPS);
-        movimientoEnemigos(enemies);
+        Sleep(220);
+        movimientoEnemigos();
         acciones(jugador);
-        HUD(jugador);
+        if (jugador->gameOver == true) {
+            printf("%d ", jugador->gameOver);
+            jugador->gameOver = false;
+            printf("%d", jugador->gameOver);
+            jugador->info = posI;
+            if (jugador->health == -1) GameOver();
+        }
+        HUD();
     }
 
     return EXIT_SUCCESS;
