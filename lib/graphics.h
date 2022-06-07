@@ -17,6 +17,8 @@
 #define TORRETA_D 194   // ┬
 #define PINCHOS 94/*65*/      // A
 #define PISTOL 170      // ¬
+#define BANDERA 244     // ¶
+#define POCION 208      // ð
 #define FPS 16
 
 typedef struct {
@@ -95,11 +97,11 @@ void gotoxy(int x, int y) {
     SetConsoleCursorPosition(consola, pos);
 }
 
-void ocultarCursor() {
+void mostrarCursor(bool flag) {
     HANDLE consola = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO cursor;
 
-    cursor.bVisible = FALSE;
+    cursor.bVisible = flag;
     cursor.dwSize = 50;
     SetConsoleCursorInfo(consola, &cursor);
 }
