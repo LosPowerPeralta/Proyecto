@@ -15,9 +15,15 @@
 #define TORRETA_L 180   // ┤
 #define TORRETA_U 193   // ┴
 #define TORRETA_D 194   // ┬
-#define PINCHOS 65      // A
-#define PISTOL 218      // ┌
-#define FPS 25
+#define PINCHOS 94/*65*/      // A
+#define PISTOL 170      // ¬
+#define FPS 16
+
+typedef struct {
+    int X;
+    int Y;
+    char forma;
+} Pixel;
 
 typedef struct{
     int limiteX_I;
@@ -30,6 +36,8 @@ typedef struct{
     Limites *limits;
     int tipo;
 } Obstaculo;
+
+void gotoxy(int x, int y);
 
 Limites *createLimites(int limiteX_I, int limiteX_S, int limiteY_I, int limiteY_S) {
     Limites *newLimites = (Limites *) malloc(sizeof(Limites));
@@ -50,23 +58,30 @@ Obstaculo *createObstaculo(Limites *limits, int tipo) {
     return newObstaculo;
 }
 
-void mostrarEscenario() {
+void mostrarEscenario(int limiteX_S, int limiteY_I) {
     int cont = 0;
     
     printf("%c", ESQUINA_SI);
-    for (cont = 0; cont < 117; cont++) {
+    for (cont = 0; cont < limiteX_S; cont++) {
         printf("%c", BASE);
     }
+
+    for (cont = 0; cont < limiteY_I; cont++) {
+        printf("%c\n", ALTURA);
+    }
+    gotoxy(limiteX_S + 1, 0);
     printf("%c\n", ESQUINA_SD);
 
-    for (cont = 0; cont < 27; cont++) {
-        printf("%c%118c\n", ALTURA, ALTURA);
+    for (cont = 1; cont < limiteY_I; cont++) {
+        gotoxy(limiteX_S + 1, cont);
+        printf("%c\n", ALTURA);
     }
-
+    gotoxy(0, limiteY_I);
     printf("%c", ESQUINA_II);
-    for (cont = 0; cont < 117; cont++) {
+    for (cont = 0; cont < limiteX_S; cont++) {
         printf("%c", BASE);
     }
+    gotoxy(limiteX_S + 1, limiteY_I);
     printf("%c", ESQUINA_ID);
 }
 
@@ -88,3 +103,4 @@ void ocultarCursor() {
     cursor.dwSize = 50;
     SetConsoleCursorInfo(consola, &cursor);
 }
+
