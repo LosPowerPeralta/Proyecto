@@ -41,6 +41,11 @@ typedef struct {
 } Player;
 
 typedef struct {
+    Pixel *info;
+    int tipo;
+} Object;
+
+typedef struct {
     int intervalo;
     int cont;
 } Coldown;
@@ -70,8 +75,10 @@ void *createBullet(int X, int Y, int direccion, List *balas);
 void leerArchivoObstaculos();
 void leerArchivoEnemies();
 void leerArchivoTurrets();
+void leerArchivoObjetos();
 void mostrarObstaculos();
 void mostrarTurrets();
+void mostrarObjetos();
 void movimientoEnemigos();
 void accionTurrets();
 void salto();
@@ -81,17 +88,24 @@ void disparo(List *balas);
 void acciones();
 void menu();
 void HUD();
+void level2();
 void level1();
 void GameOver();
+void prepareVariables();
+void cleanVariables();
 void instrucciones();
 void muertePlayer();
 bool hitBoxVPlayer();
 bool hitBoxHPlayer();
+bool hitBoxHbullet(Bullet *bala);
+bool hitBoxVbullet(Bullet *bala);
 int main();
 
 List *enemies; 
 List *obstaculos;
 List *torretas;
+List *objetos;
+Player *jugador;
 
 /***************** | createPixel() | ****************/
 /* El proposito de esta función es crear una        *
@@ -139,22 +153,20 @@ Salto *createSalto() {
  * No recibe valores.                                  *
  * Retorna una dirección de momeria de la nueva        *
  * variable.                                           */
-Player *createPlayer() {
+Player *createPlayer(int X, int Y) {
     Player *newPlayer = (Player *) malloc(sizeof(Player));
 
     newPlayer->direccionH = RIGHT;
     newPlayer->direccionV = DOWN;
-    newPlayer->havePistol = true;
+    newPlayer->havePistol = false;
     //newPlayer->gameOver = 0;
-    newPlayer->health = 5;
-    newPlayer->info = createPixel(2, 18, FACE);
+    newPlayer->health = 3;
+    newPlayer->info = createPixel(X, Y, FACE);
     newPlayer->jump = createSalto();
     newPlayer->balas = createList();
 
     return newPlayer;
 }
-
-Player *jugador;
 
 /****************** | createEnemies() | ******************/
 /* El proposito de esta función es crear una variable    *
@@ -173,6 +185,17 @@ Enemies *createEnemies(int X, int Y, int limiteS, int limiteI, int direccion) {
     newEnemies->limiteS = limiteS;
 
     return newEnemies;
+}
+
+Object *createObject(int X, int Y, int tipo) {
+    Object *newObject = (Object *) malloc(sizeof(Object));
+
+    newObject->tipo = tipo;
+    if (tipo == 1)newObject->info = createPixel(X, Y, PISTOL);
+    if (tipo == 2)newObject->info = createPixel(X, Y, POCION);
+    if (tipo == 3)newObject->info = createPixel(X, Y, BANDERA);
+
+    return newObject;
 }
 
 Turrets *createTurrets(int X, int Y, int tiempo, int direccion)
@@ -199,8 +222,8 @@ Coldown *createColdown(int intervalo)
     return newColdown;
 }
 
-void leerArchivoObstaculos() {
-    FILE *archivo = fopen("csv\\obstaculos.csv", "r");
+void leerArchivoObstaculos(char *ubicacion) {
+    FILE *archivo = fopen(ubicacion, "r");
     char linea[1024];
     int limiteX_S;
     int limiteX_I;
@@ -221,10 +244,11 @@ void leerArchivoObstaculos() {
         obstacle = createObstaculo(limits, tipo);
         pushBack(obstaculos, obstacle);
     }
+    fclose(archivo);
 }
 
-void leerArchivoEnemies() {
-    FILE *archivo = fopen("csv\\enemies.csv", "r");
+void leerArchivoEnemies(char *ubicacion) {
+    FILE *archivo = fopen(ubicacion, "r");
     char linea[1024];
     int X;
     int Y;
@@ -245,11 +269,31 @@ void leerArchivoEnemies() {
         enemy = createEnemies(X, Y, limiteS, limiteI, direccionAux);
         pushBack(enemies, enemy);
     }
+    fclose(archivo);
+}
+
+void leerArchivoObjetos(char *ubicacion) {
+    FILE *archivo = fopen(ubicacion, "r");
+    Object *objeto;
+    char linea[1024];
+    int X;
+    int Y;
+    int tipo;
+
+    fgets(linea, 1023, archivo);
+    while (fgets(linea, 1023, archivo) != NULL) {
+        X = toNumber((char *)get_csv_field(linea, 0));
+        Y = toNumber((char *)get_csv_field(linea, 1));
+        tipo = toNumber((char *)get_csv_field(linea, 2));
+        objeto = createObject(X, Y, tipo);
+        pushBack(objetos, objeto);
+    }
+    fclose(archivo);
 
 }
 
-void leerArchivoTurrets() {
-    FILE *archivo = fopen("csv\\turrets.csv", "r");
+void leerArchivoTurrets(char *ubicacion) {
+    FILE *archivo = fopen(ubicacion, "r");
     char linea[1024];
     int X;
     int Y;
@@ -267,7 +311,7 @@ void leerArchivoTurrets() {
         turret = createTurrets(X, Y, tiempo, direccion);
         pushBack(torretas, turret);
     }
-
+    fclose(archivo);
 }
 
 bool hitBoxVPlayer() {
@@ -283,7 +327,6 @@ bool hitBoxVPlayer() {
             if (pos->Y == limits->limiteY_I && (pos->X >= limits->limiteX_I - 1 && pos->X <= limits->limiteX_S)) {
                 if (obstacle->tipo == 2) {
                     muertePlayer();
-                    //sndPlaySound("sound\\SOUND OFF ROBLOX SONIDO OFF MUERTE DE ROBLOX.wav", SND_SYNC);
                 }
                 return true;
             }
@@ -292,7 +335,6 @@ bool hitBoxVPlayer() {
             if (pos->Y + 1 == limits->limiteY_S && (pos->X >= limits->limiteX_I - 1 && pos->X <= limits->limiteX_S)) {
                 if (obstacle->tipo == 2) {
                     muertePlayer();
-                    //sndPlaySound("sound\\SOUND OFF ROBLOX SONIDO OFF MUERTE DE ROBLOX.wav", SND_SYNC);
                 }
                 return true;
             }
@@ -310,8 +352,8 @@ bool hitBoxVPlayer() {
 bool hitBoxHPlayer() {
     Pixel *pos = jugador->info;
     Obstaculo *obstacle = firstList(obstaculos);
-    Enemies *enemy = firstList(enemies);
-    Pixel *posE;
+    Object *objeto = firstList(objetos);
+    Pixel *posO;
     Limites *limits;
 
     while (obstacle != NULL) {
@@ -324,7 +366,52 @@ bool hitBoxHPlayer() {
         }
         obstacle = nextList(obstaculos);
     }
+    
+    while (objeto != NULL) {
+        posO = objeto->info;
+        if (pos->X == posO->X && pos->Y == posO->Y) {
+            if (objeto->tipo == 1) jugador->havePistol = true;
+            if (objeto->tipo == 2) jugador->health++;
+            if (objeto->tipo == 3) {
+                cleanVariables();
+                level2();
+            }
+            popCurrent(objetos);
+        }
+        objeto = nextList(objetos);
+    }
 
+    return false;
+}
+
+bool hitBoxVbullet(Bullet *bala) {
+    Obstaculo *obstacle = firstList(obstaculos);
+    Limites *limits;
+    Pixel *posB = bala->info;
+    Enemies *enemy = firstList(enemies);
+    Pixel *posE;
+    Pixel *posP = jugador->info;
+
+    while (obstacle != NULL) {
+        limits = obstacle->limits;
+        if (bala->direccion == UP) {
+            if (posB->Y - 1  == limits->limiteY_I && (posB->X >= limits->limiteX_I - 1 && posB->X <= limits->limiteX_S + 1)) return true;
+        }
+        if (bala->direccion == DOWN) {
+            if (posB->Y + 1 == limits->limiteY_S && (posB->X >= limits->limiteX_I - 1 && posB->X <= limits->limiteX_S + 1)) return true;
+        }
+        obstacle = nextList(obstaculos);
+    }
+
+    /*while (enemy != NULL) {
+        posE = enemy->info;
+        if (posE->X == posB->X && posE->Y && posB->Y) popCurrent(enemies);
+        enemy = nextList(enemies);
+    }
+
+    if (posB->X == posP->X && posB->Y == posP->Y) {
+        muertePlayer();
+    }*/
     return false;
 }
 
@@ -332,6 +419,8 @@ bool hitBoxHbullet(Bullet *bala) {
     Obstaculo *obstacle = firstList(obstaculos);
     Limites *limits;
     Pixel *posB = bala->info;
+    Enemies *enemy = firstList(enemies);
+    Pixel *posE;
     Pixel *posP = jugador->info;
 
     while (obstacle != NULL) {
@@ -344,6 +433,13 @@ bool hitBoxHbullet(Bullet *bala) {
         }
         obstacle = nextList(obstaculos);
     }
+
+    while (enemy != NULL) {
+        posE = enemy->info;
+        if (posE->X == posB->X && posE->Y && posB->Y) popCurrent(enemies);
+        enemy = nextList(enemies);
+    }
+
     if (posB->X == posP->X && posB->Y == posP->Y) {
         muertePlayer();
     }
@@ -403,6 +499,18 @@ void mostrarTurrets() {
     }
 }
 
+void mostrarObjetos() {
+    Object *objeto = firstList(objetos);
+    Pixel *pos;
+
+    while (objeto != NULL) {
+        pos = objeto->info;
+        gotoxy(pos->X, pos->Y);
+        printf("%c", pos->forma);
+        objeto = nextList(objetos);
+    }
+}
+
 void movimientoEnemigos() {
     Enemies *enemy = firstList(enemies);
     Pixel *posP = jugador->info;
@@ -435,7 +543,6 @@ void movimientoEnemigos() {
         }
 
         if (posE->X == posP->X && posE->Y == posP->Y) {
-            //sndPlaySound("sound\\SOUND OFF ROBLOX SONIDO OFF MUERTE DE ROBLOX.wav", SND_SYNC);
             muertePlayer();
         }
         enemy = nextList(enemies);
@@ -587,10 +694,23 @@ void disparo(List *balas) {
             }
         }  
         if (bala->direccion == UP) {
-            if (bala->info->Y != 1) bala->info->Y--;
+            if (bala->info->Y != 1 && !hitBoxVbullet(bala)) {
+                bala->info->Y--;
+            }
             gotoxy(bala->info->X, bala->info->Y);
             printf("%c", bala->info->forma);
-            if (bala->info->Y == 1) {
+            if (bala->info->Y == 1 || hitBoxVbullet(bala)) {
+                gotoxy(bala->info->X, bala->info->Y);
+                printf(" ");
+                popCurrent(balas);
+            }
+        }
+        if (bala->direccion == DOWN) {
+            if (bala->info->Y != 27 && !hitBoxVbullet(bala)) bala->info->Y++;
+            gotoxy(bala->info->X, bala->info->Y);
+            printf("%c", bala->info->forma);
+            
+            if (bala->info->Y == 27 || hitBoxVbullet(bala)) {
                 gotoxy(bala->info->X, bala->info->Y);
                 printf(" ");
                 popCurrent(balas);
@@ -614,9 +734,10 @@ void acciones() {
         gotoxy(jugador->info->X, jugador->info->Y);
         printf("%c", jugador->info->forma);
         if (kbhit()) {
-            if (GetAsyncKeyState(ESC)) exit(1);
-            if (GetAsyncKeyState(ENTER)) {
+            if (GetAsyncKeyState(ESC)) GameOver(1);
+            if (GetAsyncKeyState(ENTER) && jugador->havePistol == true) {
                 createBullet(pos->X, pos->Y, jugador->direccionH, jugador->balas);
+                jugador->havePistol = false;
                 //sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
             }
         }  
@@ -627,45 +748,104 @@ void acciones() {
 void HUD() {
     int cont;
 
-    gotoxy(0,30);
+    gotoxy(0,29);
     printf("                                                        ");
-    gotoxy(0,30);
+    gotoxy(0,29);
     printf("Vida = ");
     for (cont = 0; cont < jugador->health; cont++) {
         printf("%c ", FACE);
     }
     if (jugador->havePistol == false) printf(" Pistol = FALSE");
     if (jugador->havePistol == true) printf(" Pistol = TRUE");
+    gotoxy(85,29);
+    printf("Pulse Escape para volver al menu.");
 }
 
-void GameOver() {
-    system("cls");
-    gotoxy(50,10);
-    //sndPlaySound("sound\\PERDISTE.wav", SND_SYNC);
-    printf("PERDISTEEEEE!!!!!");
-    gotoxy(0,30);
-    system("pause");
-    main();
+void GameOver(int flag) {
+    cleanList(torretas);
+    cleanList(enemies);
+    cleanList(obstaculos);
+    cleanList(objetos);
+    if (flag == 1) {
+        system("cls");
+        gotoxy(50,10);
+        //sndPlaySound("sound\\PERDISTE.wav", SND_ASYNC);
+        printf("PERDISTEEEEE!!!!!");
+        gotoxy(0,30);
+        printf("Pulse Escape para volver al menu.");
+        while (true) {
+            if (GetAsyncKeyState(ESC)) main();
+        }
+    }
 }
 
 void muertePlayer() {
+    //sndPlaySound("sound\\SOUND OFF ROBLOX SONIDO OFF MUERTE DE ROBLOX.wav", SND_SYNC);
     //jugador->gameOver = 0;
     jugador->info->X = 2;
     jugador->info->Y = 18;
     jugador->health--;
-    if (jugador->health == -1) GameOver();
+    if (jugador->health == -1) GameOver(1);
+}
+
+void cleanVariables() {
+    cleanList(torretas);
+    cleanList(enemies);
+    cleanList(obstaculos);
+    cleanList(objetos);
+}
+
+void prepareVariables() {
+    enemies = createList();
+    obstaculos = createList();
+    torretas = createList();
+    objetos = createList();
+}
+
+void level2() {
+    prepareVariables();
+    jugador = createPlayer(1, 27);
+
+    leerArchivoEnemies("csv\\Level2\\enemies.csv");
+    printf("xd");
+    leerArchivoObstaculos("csv\\Level2\\obstaculos.csv");
+    leerArchivoTurrets("csv\\Level2\\turrets.csv");
+    leerArchivoObjetos("csv\\Level2\\objetos.csv");
+
+    system("cls");
+    mostrarCursor(false);
+    mostrarEscenario(117,28);
+    mostrarObstaculos();
+    mostrarTurrets();
+    mostrarObjetos();
+    //PlaySound("sound\\Plants vs Zombies Soundtrack. [Main Menu].wav", NULL, SND_ASYNC | SND_NOSTOP);
+    gotoxy(jugador->info->X, jugador->info->Y);
+    printf("%c", jugador->info->forma);
+
+    while (true) {
+        Sleep(FPS);
+        movimientoEnemigos();
+        acciones();
+        accionTurrets(torretas);
+        HUD();
+    }
 }
 
 void level1() {
-    leerArchivoEnemies();
-    leerArchivoObstaculos();
-    leerArchivoTurrets();
+    prepareVariables();
+    jugador = createPlayer(2, 18);
+
+    leerArchivoEnemies("csv\\Level1\\enemies.csv");
+    leerArchivoObstaculos("csv\\Level1\\obstaculos.csv");
+    leerArchivoTurrets("csv\\Level1\\turrets.csv");
+    leerArchivoObjetos("csv\\Level1\\objetos.csv");
 
     system("cls");
-    ocultarCursor();
+    mostrarCursor(false);
     mostrarEscenario(117,28);
     mostrarObstaculos();
-    mostrarTurrets(torretas);
+    mostrarTurrets();
+    mostrarObjetos();
     //PlaySound("sound\\Plants vs Zombies Soundtrack. [Main Menu].wav", NULL, SND_ASYNC | SND_NOSTOP);
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
@@ -681,37 +861,27 @@ void level1() {
 
 void instrucciones() {
     system("cls");
-    mostrarEscenario(50,27);
+    mostrarEscenario(51,27);
     gotoxy(19,4);
     printf("INSTRUCCIONES");
-    gotoxy(2,7);
-    printf("Teclas: ");
+    gotoxy(2,6);
+    printf("Teclas:                Enemigos:");
+    gotoxy(4,7);
+    printf("A = Izquierda         %c Funciones enemigas! ", ENEMIES);
     gotoxy(4,8);
-    printf("A = Izquierda");
+    printf("D = Derecha           %c y Torretas que disparan", TORRETA_L);
     gotoxy(4,9);
-    printf("D = Derecha");
+    printf("ENTER = Disparar        %c Copyright!!", BALA);
     gotoxy(4,10);
-    printf("ENTER = Disparar");
-    gotoxy(4,11);
-    printf("ESPACIO = Saltar");
-    gotoxy(25, 7);
-    printf("Enemigos: ");
-    gotoxy(26,8);
-    printf("%c Funciones enemigas!", ENEMIES);
-    gotoxy(26,9);
-    printf("%c y Torretas que disparan", TORRETA_R);
-    gotoxy(28,10);
-    printf("%c Copyright!!", BALA);
+    printf("ESPACIO = Saltar        Aunque tu tambien");
     gotoxy(28,11);
-    printf("Aunque tu tambien");
-    gotoxy(28,12);
     printf("podras ;D");
     gotoxy(2,13);
-    printf("Obstaculos: ");
+    printf("Obstaculos:            Para pasar de nivel:");
     gotoxy(4,14);
-    printf("%c%c%c = Superficie", BASE,BASE,BASE);
+    printf("%c%c%c = Superficie       Solo debes tomar esta", BASE,BASE,BASE);
     gotoxy(4,15);
-    printf("%c = Pinchos!!", PINCHOS);
+    printf("%c = Pinchos!!          bandera = %c.", PINCHOS, BANDERA);
     gotoxy(2,17);
     printf("Habilidades: ");
     gotoxy(4,18);
@@ -720,6 +890,12 @@ void instrucciones() {
     printf("Solo podras disparar una bala cada");
     gotoxy(4,20);
     printf("vez que la encuentres.");
+    gotoxy(4,22);
+    printf("%c = Pocion de vida", POCION);
+    gotoxy(4,23);
+    printf("Aumenta en 1 tu vida asi que");
+    gotoxy(4,24);
+    printf("aprovechala :3.");
     gotoxy(1,26);
     printf("Pulse Escape para volver al menu.");
     while (true) {
@@ -734,6 +910,8 @@ void menu() {
     pos.X = 8;
     pos.Y = 11;
     system("cls");
+    fflush(stdin);
+    mostrarCursor(true);
     mostrarEscenario(50,27);
     gotoxy(19,6);
     printf("Nachito Bross");
@@ -790,10 +968,6 @@ void menu() {
 }
 
 int main() {
-    jugador = createPlayer();
-    enemies = createList();
-    obstaculos = createList();
-    torretas = createList();
 
     menu();
 
