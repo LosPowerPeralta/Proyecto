@@ -753,7 +753,7 @@ void HUD() {
     gotoxy(0,29);
     printf("Vida = ");
     for (cont = 0; cont < jugador->health; cont++) {
-        printf("%c ", FACE);
+        printf("%c ", (char*) 3);
     }
     if (jugador->havePistol == false) printf(" Pistol = FALSE");
     if (jugador->havePistol == true) printf(" Pistol = TRUE");
@@ -925,6 +925,7 @@ void menu() {
     printf("Instrucciones");
     gotoxy(22, 21);
     printf("Salir");
+    GetAsyncKeyState(ENTER);
 
     gotoxy(pos.X, pos.Y);
     while (true) {
