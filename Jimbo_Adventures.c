@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "lib\list.c"
+#include "lib\hashmap.c"
 #include "lib\graphics.h"
 #include "lib\operadores.h"
 #define UP 0x57
@@ -12,11 +13,21 @@
 #define LEFT 0x41
 #define ESC 0x1B
 #define SPACE 0x20
-//#define SHIFT 0x10
 #define ENTER 0X0D
 #define SALTO_MAX 6
 
 //Para compilar usar gcc game2.c -o game2 -lwinmm
+
+typedef struct {
+    char name[15];
+    char password[11];
+    char level[7];
+    bool havePistol;
+    int X;
+    int Y;
+    int health;
+    int music;
+} User;
 
 typedef struct {
     Pixel *info;
@@ -33,6 +44,7 @@ typedef struct {
 typedef struct {
     Pixel *info;
     List *balas;
+    char level[7];
     int health;
     bool havePistol;
     int direccionH;
@@ -94,7 +106,9 @@ void GameOver();
 void prepareVariables();
 void cleanVariables();
 void instrucciones();
+void iniciarSesion();
 void muertePlayer();
+void registro();
 bool hitBoxVPlayer();
 bool hitBoxHPlayer();
 bool hitBoxHbullet(Bullet *bala);
@@ -105,7 +119,9 @@ List *enemies;
 List *obstaculos;
 List *torretas;
 List *objetos;
+User *usuario;
 Player *jugador;
+HashMap *usuarios;
 
 /***************** | createPixel() | ****************/
 /* El proposito de esta función es crear una        *
@@ -153,14 +169,14 @@ Salto *createSalto() {
  * No recibe valores.                                  *
  * Retorna una dirección de momeria de la nueva        *
  * variable.                                           */
-Player *createPlayer(int X, int Y) {
+Player *createPlayer(int X, int Y, int health, char *level, int havePistol) {
     Player *newPlayer = (Player *) malloc(sizeof(Player));
 
     newPlayer->direccionH = RIGHT;
     newPlayer->direccionV = DOWN;
-    newPlayer->havePistol = false;
-    //newPlayer->gameOver = 0;
-    newPlayer->health = 3;
+    newPlayer->havePistol = havePistol;
+    strcpy(newPlayer->level, level);
+    newPlayer->health = health;
     newPlayer->info = createPixel(X, Y, FACE);
     newPlayer->jump = createSalto();
     newPlayer->balas = createList();
@@ -198,6 +214,21 @@ Object *createObject(int X, int Y, int tipo) {
     return newObject;
 }
 
+User *createUser(int X, int Y, char *password, char *name, char *level, int health, bool flag) {
+    User *newUser = (User *) malloc(sizeof(User));
+
+    newUser->havePistol = flag;
+    strcpy(newUser->level, level);
+    strcpy(newUser->name, name);
+    strcpy(newUser->password, password); 
+    newUser->health = health;
+    newUser->X = X;
+    newUser->Y = Y;
+    newUser->music = 1;
+
+    return newUser;
+}
+
 Turrets *createTurrets(int X, int Y, int tiempo, int direccion)
 {
     Turrets *newTurrets = (Turrets*) malloc(sizeof(Turrets));
@@ -220,6 +251,33 @@ Coldown *createColdown(int intervalo)
     newColdown->cont = 0;
 
     return newColdown;
+}
+
+void leerArchivoUsuarios(HashMap *usuarios) {
+    FILE *archivo = fopen("csv\\Usuarios.csv", "r");
+    User *usuario;
+    char linea[1024];
+    char name[15];
+    char password[11];
+    char level[7];
+    char flag[6];
+    int X;
+    int Y;
+    int health;
+
+    fgets(linea, 1023, archivo);
+    while (fgets(linea, 1023, archivo) != NULL) {
+        strcpy(name, get_csv_field(linea, 0));
+        strcpy(password, get_csv_field(linea, 1));
+        strcpy(level, get_csv_field(linea, 2));
+        X = toNumber((char *)get_csv_field(linea, 3));
+        Y = toNumber((char *)get_csv_field(linea, 4));
+        health = toNumber((char *)get_csv_field(linea, 5));
+        strcpy(flag, get_csv_field(linea, 6));
+        if (strcmp(flag, "false") == 0) usuario = createUser(X, Y, password, name, level, health, false);
+        if (strcmp(flag, "true") == 0) usuario = createUser(X, Y, password, name, level, health, true);
+        insertMap(usuarios, usuario->name, usuario);
+    }
 }
 
 void leerArchivoObstaculos(char *ubicacion) {
@@ -374,7 +432,7 @@ bool hitBoxHPlayer() {
             if (objeto->tipo == 2) jugador->health++;
             if (objeto->tipo == 3) {
                 cleanVariables();
-                level2();
+                level2(1);
             }
             popCurrent(objetos);
         }
@@ -403,7 +461,7 @@ bool hitBoxVbullet(Bullet *bala) {
         obstacle = nextList(obstaculos);
     }
 
-    /*while (enemy != NULL) {
+    while (enemy != NULL) {
         posE = enemy->info;
         if (posE->X == posB->X && posE->Y && posB->Y) popCurrent(enemies);
         enemy = nextList(enemies);
@@ -411,7 +469,7 @@ bool hitBoxVbullet(Bullet *bala) {
 
     if (posB->X == posP->X && posB->Y == posP->Y) {
         muertePlayer();
-    }*/
+    }
     return false;
 }
 
@@ -721,28 +779,58 @@ void disparo(List *balas) {
 
 }
 
+void saveData() {
+    FILE *archivo = fopen("csv\\Usuarios.csv", "w");
+    Pair *aux;
+    User *auxUser;
+
+    usuario->havePistol = jugador->havePistol;
+    usuario->health = jugador->health;
+    strcpy(usuario->level, jugador->level);
+    usuario->X = jugador->info->X;
+    usuario->Y = jugador->info->Y;
+
+    fprintf(archivo, "Name,Password,Level,posX,posY,Health,Pistol\n");
+    aux = firstMap(usuarios);
+    while (aux != NULL) {
+        auxUser = aux->value;
+
+        fprintf(archivo, "%s,", auxUser->name);
+        fprintf(archivo, "%s,", auxUser->password);
+        fprintf(archivo, "%s,", auxUser->level);
+        fprintf(archivo, "%d,", auxUser->X);
+        fprintf(archivo, "%d,", auxUser->Y);
+        fprintf(archivo, "%d,", auxUser->health);
+        if (auxUser->havePistol == false) fprintf(archivo, "false\n");
+        else if (auxUser->havePistol == true) fprintf(archivo, "true\n");
+
+        aux = nextMap(usuarios);
+    }
+
+    fclose(archivo);
+    menu();
+}
+
 void acciones() {
     Pixel *pos = jugador->info;
 
     gotoxy(jugador->info->X, jugador->info->Y);
     printf(" ");
     hitBoxHPlayer();
-    //if (jugador->gameOver != 1) {
-        if (jugador->jump->existSalto != true) movimientoLateral();
+    if (jugador->jump->existSalto != true) movimientoLateral();
     
-        movimientoVertical();
-        gotoxy(jugador->info->X, jugador->info->Y);
-        printf("%c", jugador->info->forma);
-        if (kbhit()) {
-            if (GetAsyncKeyState(ESC)) GameOver(1);
-            if (GetAsyncKeyState(ENTER) && jugador->havePistol == true) {
-                createBullet(pos->X, pos->Y, jugador->direccionH, jugador->balas);
-                jugador->havePistol = false;
-                //sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
-            }
-        }  
-        disparo(jugador->balas);
-    //}
+    movimientoVertical();
+    gotoxy(jugador->info->X, jugador->info->Y);
+    printf("%c", jugador->info->forma);
+    if (kbhit()) {
+        if (GetAsyncKeyState(ESC)) saveData();
+        if (GetAsyncKeyState(ENTER) && jugador->havePistol == true) {
+            createBullet(pos->X, pos->Y, jugador->direccionH, jugador->balas);
+            jugador->havePistol = false;
+            sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
+        }
+    }  
+    disparo(jugador->balas);
 }
 
 void HUD() {
@@ -753,7 +841,7 @@ void HUD() {
     gotoxy(0,29);
     printf("Vida = ");
     for (cont = 0; cont < jugador->health; cont++) {
-        printf("%c ", (char*) 3);
+        	printf("%c ", (char*) 3);
     }
     if (jugador->havePistol == false) printf(" Pistol = FALSE");
     if (jugador->havePistol == true) printf(" Pistol = TRUE");
@@ -769,7 +857,7 @@ void GameOver(int flag) {
     if (flag == 1) {
         system("cls");
         gotoxy(50,10);
-        //sndPlaySound("sound\\PERDISTE.wav", SND_ASYNC);
+        sndPlaySound("sound\\PERDISTE.wav", SND_ASYNC);
         printf("PERDISTEEEEE!!!!!");
         gotoxy(0,30);
         printf("Pulse Escape para volver al menu.");
@@ -780,8 +868,7 @@ void GameOver(int flag) {
 }
 
 void muertePlayer() {
-    //sndPlaySound("sound\\SOUND OFF ROBLOX SONIDO OFF MUERTE DE ROBLOX.wav", SND_SYNC);
-    //jugador->gameOver = 0;
+    sndPlaySound("sound\\Aaaaa   Grito de sr.pelo.wav", SND_SYNC);
     jugador->info->X = 2;
     jugador->info->Y = 18;
     jugador->health--;
@@ -802,12 +889,14 @@ void prepareVariables() {
     objetos = createList();
 }
 
-void level2() {
+void level2(int firstTime) {
     prepareVariables();
-    jugador = createPlayer(1, 27);
+
+    if (firstTime == 1) {
+        jugador = createPlayer(1, 27, 3, "level2", false);
+    }
 
     leerArchivoEnemies("csv\\Level2\\enemies.csv");
-    printf("xd");
     leerArchivoObstaculos("csv\\Level2\\obstaculos.csv");
     leerArchivoTurrets("csv\\Level2\\turrets.csv");
     leerArchivoObjetos("csv\\Level2\\objetos.csv");
@@ -818,7 +907,6 @@ void level2() {
     mostrarObstaculos();
     mostrarTurrets();
     mostrarObjetos();
-    //PlaySound("sound\\Plants vs Zombies Soundtrack. [Main Menu].wav", NULL, SND_ASYNC | SND_NOSTOP);
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
 
@@ -831,9 +919,11 @@ void level2() {
     }
 }
 
-void level1() {
+void level1(int firstTime) {
+    if (firstTime == 1) {
+        jugador = createPlayer(2, 18, 3, "level1", false);
+    }
     prepareVariables();
-    jugador = createPlayer(2, 18);
 
     leerArchivoEnemies("csv\\Level1\\enemies.csv");
     leerArchivoObstaculos("csv\\Level1\\obstaculos.csv");
@@ -846,7 +936,6 @@ void level1() {
     mostrarObstaculos();
     mostrarTurrets();
     mostrarObjetos();
-    //PlaySound("sound\\Plants vs Zombies Soundtrack. [Main Menu].wav", NULL, SND_ASYNC | SND_NOSTOP);
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
 
@@ -903,77 +992,207 @@ void instrucciones() {
     }
 }
 
+void registro() {
+    char name[15];
+    char password[11];
+    char password2[11];
+    char accion;
+    User *usuario = NULL;
+
+    system("cls");
+    mostrarEscenario(60,16);
+    gotoxy(25,3);
+    printf("REGISTRO");
+    gotoxy(2,6);
+    printf("Nuevo nombre de usuario: ");
+    fflush(stdin);
+    gets(name);
+    gotoxy(2,8);
+
+    if (searchMap(usuarios, name) != NULL) {
+        printf("El usuario ingresado ya existe");
+        gotoxy(2,9);
+        printf("deseas iniciar sesión? (s/n): ");
+        while (true) {
+            fflush(stdin);
+            accion = getch();
+            accion = tolower(accion);
+            if (accion == 's') iniciarSesion();
+            if (accion == 'n') registro();
+            printf("Opcion escogida incorrecta, intentelo de nuevo:           ");
+            gotoxy(2,11);
+        }
+    }
+    else {
+        while(true) {
+            gotoxy(2, 8);
+            printf("Password:                                                 ");
+            gotoxy(11, 8);
+            fflush(stdin);
+            gets(password);
+            gotoxy(2, 10);
+            printf("Confirm Password:                                         ");
+            gotoxy(19, 10);
+            fflush(stdin);
+            gets(password2);
+            if (strcmp(password, password2) != 0) {
+                gotoxy(2, 12);
+                printf("Las contraseñas no coinciden");
+            }
+            else break;
+        }
+    }
+    usuario = createUser(2, 18, password, name, "level1", 3, 0);
+    insertMap(usuarios, name, usuario);
+    level1(1);
+}
+
+void iniciarSesion() {
+    char name[15];
+    char password[11];
+    char accion;
+    usuario = NULL;
+
+    system("cls");
+    mostrarEscenario(60,16);
+    gotoxy(23,3);
+    printf("INICIO DE SESION");
+
+    if (usuarios->size == 0) {
+        gotoxy(2,6);
+        printf("No hay usuarios registrados.");
+        gotoxy(2,7);
+        printf("Desea hacerlo? (s/n): ");
+        gotoxy(23,7);
+        while (true) {
+            fflush(stdin);
+            accion = getch();
+            accion = tolower(accion);
+            if (accion == 's') registro();
+            if (accion == 'n') menu();
+            gotoxy(2,7);
+            printf("Opcion incorrecta, intentelo de nuevo: ");
+            gotoxy(40, 7);
+        }
+    }
+    gotoxy(2,6);
+    printf("Name: ");
+    fflush(stdin);
+    gets(name);
+    gotoxy(2,8);
+
+    if (searchMap(usuarios, name) != NULL) {
+        usuario = (User *)searchMap(usuarios, name)->value;
+        printf("Password: ");
+        while (true) {
+            fflush(stdin);
+            gets(password);
+
+            if (strcmp(usuario->password, password) == 0) {
+                jugador = createPlayer(usuario->X, usuario->Y, usuario->health, usuario->level, usuario->havePistol);
+                if (strcmp(usuario->level, "level1") == 0) level1(0);
+                if (strcmp(usuario->level, "level2") == 0) level2(0);
+            }
+            else {
+                gotoxy(2,10);
+                printf("Contrasena incorrecta, intentelo de nuevo:               ");
+                gotoxy(45, 10);
+            }
+        }
+    }
+    else {
+        printf("Usuario no encontrado.\n");
+        gotoxy(2,9);
+        printf("Desea registrarse? (s/n): ");
+        fflush(stdin);
+        accion = getch();
+        accion = tolower(accion);
+        if (accion == 's') registro(); 
+    }
+
+    
+    gotoxy(1,15);
+    printf("Pulse Escape para volver al menu.");
+    while (true) {
+        if (GetAsyncKeyState(ESC)) menu();
+    }
+}
+
 void menu() {
     Pixel pos;
-    int time = 0;
+    char accion;
+    char basura[100];
 
-    pos.X = 8;
+    sndPlaySound("sound\\Menu music.wav", SND_ASYNC | SND_LOOP);
+    pos.X = 9;
     pos.Y = 11;
+
     system("cls");
-    fflush(stdin);
     mostrarCursor(true);
-    mostrarEscenario(50,27);
-    gotoxy(19,6);
+    mostrarEscenario(51,27);
+    gotoxy(20,6);
     printf("Nachito Bross");
-    gotoxy(8,11);
+    gotoxy(9,11);
     printf("Nueva Partida");
-    gotoxy(30,11);
+    gotoxy(31,11);
     printf("Continuar Partida");
-    gotoxy(8,16);
+    gotoxy(9,16);
     printf("Opciones");
-    gotoxy(30,16);
+    gotoxy(31,16);
     printf("Instrucciones");
-    gotoxy(22, 21);
+    gotoxy(23, 21);
     printf("Salir");
-    GetAsyncKeyState(ENTER);
+    gotoxy(2, 25);
+    printf("A = Izquierda  D = Derecha  W = Arriba  S = Abajo");
+    gotoxy(21,26);
+    printf("E = Enter");
 
     gotoxy(pos.X, pos.Y);
     while (true) {
-        Sleep(FPS);
         
-        if (time == 10) {
-            if (GetAsyncKeyState(RIGHT)) {
-                if (pos.X == 8 && pos.Y == 11) pos.X = 30;
-                if (pos.X == 8 && pos.Y == 16) pos.X = 30;
-            }
-            if (GetAsyncKeyState(LEFT)) {
-                if (pos.X == 30 && pos.Y == 11) pos.X = 8;
-                if (pos.X == 30 && pos.Y == 16) pos.X = 8;
-            }
-            if (GetAsyncKeyState(DOWN)) {
-                if ((pos.X == 8 && pos.Y == 16) || (pos.X == 30 && pos.Y == 16)) {
-                    pos.X = 22;
-                    pos.Y = 21;
-                }
-                if (pos.X == 8 && pos.Y == 11) pos.Y = 16;
-                if (pos.X == 30 && pos.Y == 11) pos.Y = 16;
-            }
-            if (GetAsyncKeyState(UP)) {
-                if (pos.X == 8 && pos.Y == 16) pos.Y = 11;
-                if (pos.X == 30 && pos.Y == 16) pos.Y = 11;
-                if (pos.X == 22 && pos.Y == 21) {
-                    pos.X = 8;
-                    pos.Y = 16;
-                }
-            }
-            if (GetAsyncKeyState(ENTER)) {
-                if (pos.X == 8 && pos.Y == 11) level1();
-                if (pos.X == 30 && pos.Y == 16) instrucciones();
-                if (pos.X == 22 && pos.Y == 21) exit(1);
-            }
-            time = 0;
-            gotoxy(pos.X, pos.Y);
+        accion = getch();
+        accion = tolower(accion);
+
+        if (accion == 'd') {
+            if (pos.X == 9 && pos.Y == 11) pos.X = 31;
+            if (pos.X == 9 && pos.Y == 16) pos.X = 31;
         }
-        time++;
+        if (accion == 'a') {
+            if (pos.X == 31 && pos.Y == 11) pos.X = 9;
+            if (pos.X == 31 && pos.Y == 16) pos.X = 9;
+        }
+        if (accion == 's') {
+            if ((pos.X == 9 && pos.Y == 16) || (pos.X == 31 && pos.Y == 16)) {
+                pos.X = 23;
+                pos.Y = 21;
+            }
+            if (pos.X == 9 && pos.Y == 11) pos.Y = 16;
+            if (pos.X == 31 && pos.Y == 11) pos.Y = 16;
+        }
+        if (accion == 'w') {
+            if (pos.X == 9 && pos.Y == 16) pos.Y = 11;
+            if (pos.X == 31 && pos.Y == 16) pos.Y = 11;
+            if (pos.X == 23 && pos.Y == 21) {
+                pos.X = 9;
+                pos.Y = 16;
+            }
+        }
+
+        if (accion == 'e') {
+            if (pos.X == 9 && pos.Y == 11) registro();
+            if (pos.X == 31 && pos.Y == 11) iniciarSesion(usuarios);
+            if (pos.X == 31 && pos.Y == 16) instrucciones();
+            if (pos.X == 23 && pos.Y == 21) exit(1);
+        }
+        gotoxy(pos.X, pos.Y);
     }
 }
 
 int main() {
+    usuarios = createMap(25);
 
+    leerArchivoUsuarios(usuarios);
     menu();
 
     return EXIT_SUCCESS;
 }
-
-
-
