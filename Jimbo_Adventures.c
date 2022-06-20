@@ -16,7 +16,7 @@
 #define ENTER 0X0D
 #define SALTO_MAX 6
 
-//Para compilar usar gcc game2.c -o game2 -lwinmm
+//Para compilar usar gcc Jimbo_Adventures.c -o Jimbo_Adventures -lwinmm
 
 typedef struct {
     char name[15];
@@ -808,7 +808,6 @@ void saveData() {
     }
 
     fclose(archivo);
-    menu();
 }
 
 void acciones() {
@@ -823,7 +822,10 @@ void acciones() {
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
     if (kbhit()) {
-        if (GetAsyncKeyState(ESC)) saveData();
+        if (GetAsyncKeyState(ESC)) {
+            saveData();
+            menu();
+        }
         if (GetAsyncKeyState(ENTER) && jugador->havePistol == true) {
             createBullet(pos->X, pos->Y, jugador->direccionH, jugador->balas);
             jugador->havePistol = false;
@@ -1027,12 +1029,12 @@ void registro() {
         while(true) {
             gotoxy(2, 8);
             printf("Password:                                                 ");
-            gotoxy(11, 8);
+            gotoxy(12, 8);
             fflush(stdin);
             gets(password);
             gotoxy(2, 10);
             printf("Confirm Password:                                         ");
-            gotoxy(19, 10);
+            gotoxy(20, 10);
             fflush(stdin);
             gets(password2);
             if (strcmp(password, password2) != 0) {
@@ -1044,7 +1046,77 @@ void registro() {
     }
     usuario = createUser(2, 18, password, name, "level1", 3, 0);
     insertMap(usuarios, name, usuario);
-    level1(1);
+    menu();
+}
+
+void eliminarPersonaje() {
+    int cont;
+
+    gotoxy(2,12);
+    printf("Eliminando Personaje");
+    for (cont = 0; cont < 3; cont++) {
+        Sleep(45);
+        printf(".");
+    }
+    eraseMap(usuarios, usuario->name);
+    gotoxy(2,13);
+    printf("Personaje eliminado con exito!");
+
+}
+
+void opciones() {
+    COORD pos;
+    char accion;
+    char opcion;
+
+    pos.X = 2;
+    pos.Y = 8;
+
+    system("cls");
+    mostrarEscenario(60,20);
+    gotoxy(25,3);
+    printf("OPCIONES");
+    gotoxy(2,8);
+    printf("Musica: Si");
+    gotoxy(2,10);
+    printf("Eliminar Personaje");
+    gotoxy(2, 16);
+    printf("Pulse Escape para volver al menu.");
+    gotoxy(2, 18);
+    printf("A = Izquierda  D = Derecha  W = Arriba  S = Abajo");
+    gotoxy(21,19);
+    printf("E = Enter");
+
+    while (true) {
+        accion = getch();
+        accion = tolower(accion);
+
+        if (accion == 's') 
+            if (pos.X == 2 && pos.Y == 8) pos.Y = 10;
+        if (accion == 'w')
+            if (pos.X == 2 && pos.Y == 10) pos.Y = 8;
+        if (accion == 'e') {
+            if (pos.X == 2 && pos.Y == 8) {
+                gotoxy(2,8);
+                printf("Musica: No");
+                usuario->music = 0;
+            }
+            if (pos.X == 2 && pos.Y == 10) {
+                gotoxy(2,11);
+                printf("Estas seguro de esto :c? (s/n): ");
+                while (true) {
+                    gotoxy(33,11);
+                    opcion = getch();
+                    opcion = tolower(opcion);
+                    
+                    if (opcion == 's') eliminarPersonaje();
+                    if (opcion == 'n') opciones();
+                }
+            }
+        }
+
+        if (GetAsyncKeyState(ESC)) menu();
+    }
 }
 
 void iniciarSesion() {
@@ -1069,7 +1141,7 @@ void iniciarSesion() {
             accion = getch();
             accion = tolower(accion);
             if (accion == 's') registro();
-            if (accion == 'n') menu();
+            if (accion == 'n') main();
             gotoxy(2,7);
             printf("Opcion incorrecta, intentelo de nuevo: ");
             gotoxy(40, 7);
@@ -1090,8 +1162,7 @@ void iniciarSesion() {
 
             if (strcmp(usuario->password, password) == 0) {
                 jugador = createPlayer(usuario->X, usuario->Y, usuario->health, usuario->level, usuario->havePistol);
-                if (strcmp(usuario->level, "level1") == 0) level1(0);
-                if (strcmp(usuario->level, "level2") == 0) level2(0);
+                menu();
             }
             else {
                 gotoxy(2,10);
@@ -1119,7 +1190,7 @@ void iniciarSesion() {
 }
 
 void menu() {
-    Pixel pos;
+    COORD pos;
     char accion;
     char basura[100];
 
@@ -1130,8 +1201,8 @@ void menu() {
     system("cls");
     mostrarCursor(true);
     mostrarEscenario(51,27);
-    gotoxy(20,6);
-    printf("Nachito Bross");
+    gotoxy(17,6);
+    printf("Jimbo Adventures");
     gotoxy(9,11);
     printf("Nueva Partida");
     gotoxy(31,11);
@@ -1179,20 +1250,73 @@ void menu() {
         }
 
         if (accion == 'e') {
-            if (pos.X == 9 && pos.Y == 11) registro();
-            if (pos.X == 31 && pos.Y == 11) iniciarSesion(usuarios);
+            if (pos.X == 9 && pos.Y == 11) level1(1);
+            if (pos.X == 9 && pos.Y == 16) opciones();
+            if (pos.X == 31 && pos.Y == 11) {
+                if (strcmp(jugador->level, "level1") == 0) level1(0);
+                if (strcmp(jugador->level, "level2") == 0) level2(0);
+            }
             if (pos.X == 31 && pos.Y == 16) instrucciones();
-            if (pos.X == 23 && pos.Y == 21) exit(1);
+            if (pos.X == 23 && pos.Y == 21) {
+                saveData();
+                exit(1);
+            }
         }
         gotoxy(pos.X, pos.Y);
     }
 }
 
 int main() {
+    COORD pos;
+    char accion;
+    char basura[100];
     usuarios = createMap(25);
 
     leerArchivoUsuarios(usuarios);
-    menu();
+    sndPlaySound("sound\\Menu music.wav", SND_ASYNC | SND_LOOP);
+    pos.X = 18;
+    pos.Y = 11;
+
+    system("cls");
+    mostrarCursor(true);
+    mostrarEscenario(51,27);
+    gotoxy(17,6);
+    printf("Jimbo Adventures");
+    gotoxy(18,11);
+    printf("Iniciar Sesion");
+    gotoxy(18,16);
+    printf("Registrarse");
+    gotoxy(21, 21);
+    printf("Salir");
+    gotoxy(2, 25);
+    printf("A = Izquierda  D = Derecha  W = Arriba  S = Abajo");
+    gotoxy(21,26);
+    printf("E = Enter");
+    gotoxy(pos.X, pos.Y);
+    while (true) {
+        accion = getch();
+        accion = tolower(accion);
+
+        if (accion == 's')
+            if (pos.Y == 11) pos.Y = 16;
+            else if (pos.Y == 16) {
+                pos.X = 21;
+                pos.Y = 21;
+            }
+        if (accion == 'w')
+            if (pos.Y == 21) {
+                pos.X = 18;
+                pos.Y = 16;
+            }
+            else if (pos.Y == 16) pos.Y = 11;
+
+        if (accion == 'e') {
+            if (pos.Y == 11) iniciarSesion();
+            if (pos.Y == 16) registro();
+            if (pos.Y == 21) exit(1);
+        }
+        gotoxy(pos.X, pos.Y);
+    }
 
     return EXIT_SUCCESS;
 }
