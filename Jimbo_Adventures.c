@@ -784,11 +784,13 @@ void saveData() {
     Pair *aux;
     User *auxUser;
 
-    usuario->havePistol = jugador->havePistol;
-    usuario->health = jugador->health;
-    strcpy(usuario->level, jugador->level);
-    usuario->X = jugador->info->X;
-    usuario->Y = jugador->info->Y;
+    if (usuario != NULL) {
+        usuario->havePistol = jugador->havePistol;
+        usuario->health = jugador->health;
+        strcpy(usuario->level, jugador->level);
+        usuario->X = jugador->info->X;
+        usuario->Y = jugador->info->Y;
+    }
 
     fprintf(archivo, "Name,Password,Level,posX,posY,Health,Pistol\n");
     aux = firstMap(usuarios);
@@ -999,7 +1001,6 @@ void registro() {
     char password[11];
     char password2[11];
     char accion;
-    User *usuario = NULL;
 
     system("cls");
     mostrarEscenario(60,16);
@@ -1044,8 +1045,9 @@ void registro() {
             else break;
         }
     }
-    usuario = createUser(2, 18, password, name, "level1", 3, 0);
+    usuario = createUser(2, 18, password, name, "level1", 3, false);
     insertMap(usuarios, name, usuario);
+    searchMap(usuarios, usuario->name);
     menu();
 }
 
@@ -1055,7 +1057,7 @@ void eliminarPersonaje() {
     gotoxy(2,12);
     printf("Eliminando Personaje");
     for (cont = 0; cont < 3; cont++) {
-        Sleep(45);
+        Sleep(250);
         printf(".");
     }
     eraseMap(usuarios, usuario->name);
@@ -1098,8 +1100,15 @@ void opciones() {
         if (accion == 'e') {
             if (pos.X == 2 && pos.Y == 8) {
                 gotoxy(2,8);
-                printf("Musica: No");
-                usuario->music = 0;
+                if (usuario->music == 1) {
+                    printf("Musica: No");
+                    usuario->music = 0;
+                }
+                else {
+                    printf("Musica: Si");
+                    usuario->music = 1;
+                }
+                gotoxy(2,8);
             }
             if (pos.X == 2 && pos.Y == 10) {
                 gotoxy(2,11);
@@ -1109,13 +1118,22 @@ void opciones() {
                     opcion = getch();
                     opcion = tolower(opcion);
                     
-                    if (opcion == 's') eliminarPersonaje();
+                    if (opcion == 's') {
+                        eliminarPersonaje();
+                        while(true) {
+                            if (GetAsyncKeyState(ESC)) {
+                                saveData();
+                                main();
+                            }
+                        }
+                    }
                     if (opcion == 'n') opciones();
                 }
             }
         }
 
         if (GetAsyncKeyState(ESC)) menu();
+        gotoxy(pos.X, pos.Y);
     }
 }
 
@@ -1320,3 +1338,4 @@ int main() {
 
     return EXIT_SUCCESS;
 }
+
