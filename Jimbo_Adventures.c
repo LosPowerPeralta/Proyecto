@@ -229,8 +229,7 @@ User *createUser(int X, int Y, char *password, char *name, char *level, int heal
     return newUser;
 }
 
-Turrets *createTurrets(int X, int Y, int tiempo, int direccion)
-{
+Turrets *createTurrets(int X, int Y, int tiempo, int direccion) {
     Turrets *newTurrets = (Turrets*) malloc(sizeof(Turrets));
     newTurrets->tiempo = createColdown(tiempo);
     newTurrets->balas = createList();
@@ -784,7 +783,7 @@ void saveData() {
     Pair *aux;
     User *auxUser;
 
-    if (usuario != NULL) {
+    if (jugador != NULL) {
         usuario->havePistol = jugador->havePistol;
         usuario->health = jugador->health;
         strcpy(usuario->level, jugador->level);
@@ -861,7 +860,7 @@ void GameOver(int flag) {
     if (flag == 1) {
         system("cls");
         gotoxy(50,10);
-        sndPlaySound("sound\\PERDISTE.wav", SND_ASYNC);
+        if (usuario->music == 1) sndPlaySound("sound\\PERDISTE.wav", SND_ASYNC);
         printf("PERDISTEEEEE!!!!!");
         gotoxy(0,30);
         printf("Pulse Escape para volver al menu.");
@@ -872,7 +871,7 @@ void GameOver(int flag) {
 }
 
 void muertePlayer() {
-    sndPlaySound("sound\\Aaaaa   Grito de sr.pelo.wav", SND_SYNC);
+    if (usuario->music == 1) sndPlaySound("sound\\Aaaaa   Grito de sr.pelo.wav", SND_SYNC);
     jugador->info->X = 2;
     jugador->info->Y = 18;
     jugador->health--;
@@ -1047,7 +1046,7 @@ void registro() {
     }
     usuario = createUser(2, 18, password, name, "level1", 3, false);
     insertMap(usuarios, name, usuario);
-    searchMap(usuarios, usuario->name);
+    //usuario = searchMap(usuarios, usuario->name);
     menu();
 }
 
@@ -1088,6 +1087,7 @@ void opciones() {
     printf("A = Izquierda  D = Derecha  W = Arriba  S = Abajo");
     gotoxy(21,19);
     printf("E = Enter");
+    gotoxy(pos.X, pos.Y);
 
     while (true) {
         accion = getch();
@@ -1212,14 +1212,14 @@ void menu() {
     char accion;
     char basura[100];
 
-    sndPlaySound("sound\\Menu music.wav", SND_ASYNC | SND_LOOP);
+    if (usuario->music == 1) sndPlaySound("sound\\Menu music.wav", SND_ASYNC | SND_LOOP);
     pos.X = 9;
     pos.Y = 11;
 
     system("cls");
     mostrarCursor(true);
     mostrarEscenario(51,27);
-    gotoxy(17,6);
+    gotoxy(18,6);
     printf("Jimbo Adventures");
     gotoxy(9,11);
     printf("Nueva Partida");
@@ -1292,19 +1292,19 @@ int main() {
 
     leerArchivoUsuarios(usuarios);
     sndPlaySound("sound\\Menu music.wav", SND_ASYNC | SND_LOOP);
-    pos.X = 18;
+    pos.X = 19;
     pos.Y = 11;
 
     system("cls");
     mostrarCursor(true);
     mostrarEscenario(51,27);
-    gotoxy(17,6);
+    gotoxy(18,6);
     printf("Jimbo Adventures");
-    gotoxy(18,11);
+    gotoxy(19,11);
     printf("Iniciar Sesion");
-    gotoxy(18,16);
+    gotoxy(20,16);
     printf("Registrarse");
-    gotoxy(21, 21);
+    gotoxy(23, 21);
     printf("Salir");
     gotoxy(2, 25);
     printf("A = Izquierda  D = Derecha  W = Arriba  S = Abajo");
@@ -1315,18 +1315,26 @@ int main() {
         accion = getch();
         accion = tolower(accion);
 
-        if (accion == 's')
-            if (pos.Y == 11) pos.Y = 16;
+        if (accion == 's') {
+            if (pos.Y == 11) {
+                pos.Y = 16;
+                pos.X = 20;
+            }
             else if (pos.Y == 16) {
-                pos.X = 21;
+                pos.X = 23;
                 pos.Y = 21;
             }
-        if (accion == 'w')
+        }
+        if (accion == 'w') {
             if (pos.Y == 21) {
-                pos.X = 18;
+                pos.X = 20;
                 pos.Y = 16;
             }
-            else if (pos.Y == 16) pos.Y = 11;
+            else if (pos.Y == 16) {
+                pos.Y = 11;
+                pos.X = 19;
+            }
+        }
 
         if (accion == 'e') {
             if (pos.Y == 11) iniciarSesion();
@@ -1338,4 +1346,3 @@ int main() {
 
     return EXIT_SUCCESS;
 }
-
