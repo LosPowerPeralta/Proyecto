@@ -100,8 +100,9 @@ void disparo(List *balas);
 void acciones();
 void menu();
 void HUD();
-void level2();
-void level1();
+void level3(int firstTime);
+void level2(int firstTime);
+void level1(int firstTime);
 void GameOver();
 void prepareVariables();
 void cleanVariables();
@@ -431,7 +432,8 @@ bool hitBoxHPlayer() {
             if (objeto->tipo == 2) jugador->health++;
             if (objeto->tipo == 3) {
                 cleanVariables();
-                level2(1);
+                if (strcmp(jugador->level, "level1") == 0) level2(1);
+                if (strcmp(jugador->level, "level2") == 0) level3(1);
             }
             popCurrent(objetos);
         }
@@ -462,7 +464,7 @@ bool hitBoxVbullet(Bullet *bala) {
 
     while (enemy != NULL) {
         posE = enemy->info;
-        if (posE->X == posB->X && posE->Y && posB->Y) popCurrent(enemies);
+        if (posE->X == posB->X && posE->Y == posB->Y) popCurrent(enemies);
         enemy = nextList(enemies);
     }
 
@@ -493,7 +495,7 @@ bool hitBoxHbullet(Bullet *bala) {
 
     while (enemy != NULL) {
         posE = enemy->info;
-        if (posE->X == posB->X && posE->Y && posB->Y) popCurrent(enemies);
+        if (posE->X == posB->X && posE->Y == posB->Y) popCurrent(enemies);
         enemy = nextList(enemies);
     }
 
@@ -579,7 +581,7 @@ void movimientoEnemigos() {
         gotoxy(posE->X, posE->Y);
         printf(" ");
         if (enemy->direccion == RIGHT) {
-            if (posE->X != enemy->limiteS) posE->X++;
+            if (posE->X <= enemy->limiteS) posE->X++;
             gotoxy(posE->X, posE->Y);
             printf("%c", posE->forma);
             if (posE->X == enemy->limiteS) {
@@ -589,7 +591,7 @@ void movimientoEnemigos() {
             }
         }
         if (enemy->direccion == LEFT) {
-            if (posE->X != enemy->limiteI) posE->X--;
+            if (posE->X >= enemy->limiteI) posE->X--;
             gotoxy(posE->X, posE->Y);
             printf("%c", posE->forma);
             if (posE->X == enemy->limiteI) {
@@ -871,7 +873,7 @@ void GameOver(int flag) {
 }
 
 void muertePlayer() {
-    if (usuario->music == 1) sndPlaySound("sound\\Aaaaa   Grito de sr.pelo.wav", SND_SYNC);
+    if (usuario->music == 1) sndPlaySound("sound\\SOUND OFF ROBLOX SONIDO OFF MUERTE DE ROBLOX.wav", SND_SYNC);
     jugador->info->X = 2;
     jugador->info->Y = 18;
     jugador->health--;
@@ -892,11 +894,41 @@ void prepareVariables() {
     objetos = createList();
 }
 
+void level3(int firstTime) {
+    prepareVariables();
+
+    if (firstTime == 1) {
+        jugador = createPlayer(117, 4, 3, "level3", false);
+    }
+
+    leerArchivoEnemies("csv\\Level3\\enemies.csv");
+    leerArchivoObstaculos("csv\\Level3\\obstaculos.csv");
+    leerArchivoTurrets("csv\\Level3\\turrets.csv");
+    leerArchivoObjetos("csv\\Level3\\objetos.csv");
+
+    system("cls");
+    mostrarCursor(false);
+    mostrarEscenario(117,28);
+    mostrarObstaculos();
+    mostrarTurrets();
+    gotoxy(jugador->info->X, jugador->info->Y);
+    printf("%c", jugador->info->forma);
+
+    while (true) {
+        Sleep(FPS);
+        mostrarObjetos();
+        movimientoEnemigos();
+        acciones();
+        accionTurrets(torretas);
+        HUD();
+    }
+}
+
 void level2(int firstTime) {
     prepareVariables();
 
     if (firstTime == 1) {
-        jugador = createPlayer(1, 27, 3, "level2", false);
+        jugador = createPlayer(1, 23, 3, "level2", false);
     }
 
     leerArchivoEnemies("csv\\Level2\\enemies.csv");
@@ -909,12 +941,12 @@ void level2(int firstTime) {
     mostrarEscenario(117,28);
     mostrarObstaculos();
     mostrarTurrets();
-    mostrarObjetos();
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
 
     while (true) {
         Sleep(FPS);
+        mostrarObjetos();
         movimientoEnemigos();
         acciones();
         accionTurrets(torretas);
@@ -926,6 +958,7 @@ void level1(int firstTime) {
     if (firstTime == 1) {
         jugador = createPlayer(2, 18, 3, "level1", false);
     }
+
     prepareVariables();
 
     leerArchivoEnemies("csv\\Level1\\enemies.csv");
@@ -938,12 +971,12 @@ void level1(int firstTime) {
     mostrarEscenario(117,28);
     mostrarObstaculos();
     mostrarTurrets();
-    mostrarObjetos();
     gotoxy(jugador->info->X, jugador->info->Y);
     printf("%c", jugador->info->forma);
 
     while (true) {
         Sleep(FPS);
+        mostrarObjetos();
         movimientoEnemigos();
         acciones();
         accionTurrets(torretas);
@@ -1273,6 +1306,7 @@ void menu() {
             if (pos.X == 31 && pos.Y == 11) {
                 if (strcmp(jugador->level, "level1") == 0) level1(0);
                 if (strcmp(jugador->level, "level2") == 0) level2(0);
+                if (strcmp(jugador->level, "level3") == 0) level3(0);
             }
             if (pos.X == 31 && pos.Y == 16) instrucciones();
             if (pos.X == 23 && pos.Y == 21) {
