@@ -818,7 +818,7 @@ void acciones() {
 
     gotoxy(jugador->info->X, jugador->info->Y);
     printf(" ");
-    hitBoxHPlayer();
+    //hitBoxHPlayer();
     if (jugador->jump->existSalto != true) movimientoLateral();
     
     movimientoVertical();
@@ -867,15 +867,25 @@ void GameOver(int flag) {
         gotoxy(0,30);
         printf("Pulse Escape para volver al menu.");
         while (true) {
-            if (GetAsyncKeyState(ESC)) main();
+            if (GetAsyncKeyState(ESC)) menu();
         }
     }
 }
 
 void muertePlayer() {
     if (usuario->music == 1) sndPlaySound("sound\\SOUND OFF ROBLOX SONIDO OFF MUERTE DE ROBLOX.wav", SND_SYNC);
-    jugador->info->X = 2;
-    jugador->info->Y = 18;
+    if (strcmp(jugador->level, "level1") == 0) {
+        jugador->info->X = 2;
+        jugador->info->Y = 18;
+    }
+    if (strcmp(jugador->level, "level2") == 0) {
+        jugador->info->X = 1;
+        jugador->info->Y = 23;
+    }
+    if (strcmp(jugador->level, "level3") == 0) {
+        jugador->info->X = 117;
+        jugador->info->Y = 4;
+    }
     jugador->health--;
     if (jugador->health == -1) GameOver(1);
 }
