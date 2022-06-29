@@ -1,4 +1,4 @@
-# Proyecto
+# Jimbo Adventures
 1.- Para compilar el archivo en Visual Studio Code primero debe ser con un sistema operativo Windows y además debe ser ejecutado el siguiente comando en el terminal gcc Jimbo_Adventures.c -o Jimbo_Adventures -lwinmm.
 
 2.- Hay errores en la hitBox ya que detecta choques en la esquinas cuando no hay ningún objeto por delante, cuandoo se desactiva la música debe sobreponerse un sonido para que la música deje de escucharse y las funciones de hitBox podrían estar mejor optimizadas.
