@@ -140,6 +140,14 @@ Pixel *createPixel(int X, int Y, char forma) {
     return newPixel;
 }
 
+
+/***************** | createBullet() | *******************/
+/* El proposito de esta función es crear una variable   *
+ * tipo Bullet para cada bala que sea disparada por las *
+ * torretas o por el usuario.                           *
+ * Recibe la posicion inicial de la bala, la direccion  *
+ * y la lista en donde debe estar guardada.             *
+ * No retorna valores.                                  */
 void *createBullet(int X, int Y, int direccion, List *balas) {
     Bullet *newBullet = (Bullet *) malloc(sizeof(Bullet));
 
@@ -153,6 +161,14 @@ void *createBullet(int X, int Y, int direccion, List *balas) {
     pushBack(balas, newBullet);
 }
 
+/************** | createSalto() | *****************/
+/* El proposito de esta función es crear una      * 
+ * variable tipo Salto la cual almacenará         *
+ * todo tipo de variables que afectan             *
+ * dentro de la accion.                           *
+ * No recibe valores.                             *
+ * Retorna la direccion de memoria de la          *
+ * nueva variable.                                */
 Salto *createSalto() {
     Salto *newSalto = (Salto *) malloc(sizeof(Salto));
 
@@ -204,6 +220,15 @@ Enemies *createEnemies(int X, int Y, int limiteS, int limiteI, int direccion) {
     return newEnemies;
 }
 
+/**************** | createObject() | ******************/
+/* El proposito de esta funcion es crear una variable *
+ * tipo Object el cual almacenará la posicion del     *
+ * objeto y el tipo del mismo.                        *
+ * tipo 1 = pistola                                   *
+ * tipo 2 = pocion de vida                            *
+ * tipo 3 = bandera                                   *
+ * Recibe la posicion del objeto y el tipo.           *
+ * Retorna el objeto.                                 */
 Object *createObject(int X, int Y, int tipo) {
     Object *newObject = (Object *) malloc(sizeof(Object));
 
@@ -215,6 +240,13 @@ Object *createObject(int X, int Y, int tipo) {
     return newObject;
 }
 
+/************************** | createUser() | *****************************/
+/* El proposito de esta funcion es crear una variable de tipo User el    *
+ * cual almacenará todos los datos del usuario, como por ejemplo         *
+ * la posicion de la última partida y la cantidad de vidas.              *
+ * Recibe la posicion inicial del usuario, la contraseña, su nombre.     *
+ * la vida, el nivel y una bandera que indica si tiene una pistola o no. *
+ * Retorna la variable.                                                  */
 User *createUser(int X, int Y, char *password, char *name, char *level, int health, bool flag) {
     User *newUser = (User *) malloc(sizeof(User));
 
@@ -230,6 +262,12 @@ User *createUser(int X, int Y, char *password, char *name, char *level, int heal
     return newUser;
 }
 
+/******************** | createTurrets() | ***********************/
+/* El proposito de esta función es crear una variable tipo      *
+ * Turrets la cual almacenará la posicion inicial, el tiempo    *
+ * entre cada disparo y su direccion.                           *
+ * Recibe los parametros anteriormente indicados.               *
+ * Retorna la nueva variable.                                   */
 Turrets *createTurrets(int X, int Y, int tiempo, int direccion) {
     Turrets *newTurrets = (Turrets*) malloc(sizeof(Turrets));
     newTurrets->tiempo = createColdown(tiempo);
@@ -243,6 +281,12 @@ Turrets *createTurrets(int X, int Y, int tiempo, int direccion) {
     return newTurrets;
 }
 
+/************ | createColdown() | *******************/
+/* El proposito de esta funcion es crear una        *
+ * variable tipo Coldown la cual almacenará el      *
+ * el tiempo entre cada accion.                     *
+ * Recibe el intervalo de tiempo.                   *
+ * No retorna valores.                              */
 Coldown *createColdown(int intervalo)
 {
     Coldown *newColdown = (Coldown*) malloc(sizeof(Coldown));
@@ -253,6 +297,12 @@ Coldown *createColdown(int intervalo)
     return newColdown;
 }
 
+/****************** | leerArchivoUsuarios() | *****************/
+/* El proposito de esta función es leer un archivo el cual    *
+ * almacena la información de todos los usuarios registrados. *
+ * Recibe un hashMap en el cual se almacenaran los usuarios   *
+ * para una mejor busqueda.                                   *
+ * No retorna valores.                                        */
 void leerArchivoUsuarios(HashMap *usuarios) {
     FILE *archivo = fopen("csv\\Usuarios.csv", "r");
     User *usuario;
@@ -280,6 +330,12 @@ void leerArchivoUsuarios(HashMap *usuarios) {
     }
 }
 
+/******************** | leerArchivoObstaculos() | ********************/ 
+/* El proposito de esta función es leer un archivo en donde están    *
+ * almacenados todos los obstaculos que se encuentran dentro del     *
+ * juego.                                                            *
+ * Recibe la ubicación del archivo.                                  *
+ * No retorna valores.                                               */ 
 void leerArchivoObstaculos(char *ubicacion) {
     FILE *archivo = fopen(ubicacion, "r");
     char linea[1024];
@@ -305,6 +361,11 @@ void leerArchivoObstaculos(char *ubicacion) {
     fclose(archivo);
 }
 
+/*************** | leerArchivoEnemies() | ***************/
+/* El proposito de esta función es leer un archivo que  *
+ * contiene a todos los enemigos de cada nivel.         *
+ * Recibe la ubicacion del archivo.                     *
+ * No retorna valores.                                  */
 void leerArchivoEnemies(char *ubicacion) {
     FILE *archivo = fopen(ubicacion, "r");
     char linea[1024];
@@ -330,6 +391,11 @@ void leerArchivoEnemies(char *ubicacion) {
     fclose(archivo);
 }
 
+/**************** | leerArchivoObjetos() | ********************/
+/* El proposito de esta función es leer un archivo en donde   *
+ * están contenidos todos los objetos de cada nivel.          *
+ * Recibe la ubicacion del archivo.                           *
+ * No retorna valores.                                        */
 void leerArchivoObjetos(char *ubicacion) {
     FILE *archivo = fopen(ubicacion, "r");
     Object *objeto;
@@ -350,6 +416,11 @@ void leerArchivoObjetos(char *ubicacion) {
 
 }
 
+/********************** | leerArchivoTurrets() | *********************/
+/* El proposito de esta función es leer todos las torretas que se    *
+ * encuentran en cada nivel.                                         *
+ * Recibe la ubicacion del archivo.                                  *
+ * No retorna valores.                                               */
 void leerArchivoTurrets(char *ubicacion) {
     FILE *archivo = fopen(ubicacion, "r");
     char linea[1024];
@@ -372,6 +443,31 @@ void leerArchivoTurrets(char *ubicacion) {
     fclose(archivo);
 }
 
+/*************** | winGame() | **************/
+/* El proposito de esta función es mostrar  *
+ * La pantalla de victoria al jugador.      *
+ * No recibe valores y tampoco retorna.     */
+void winGame() {
+    system("cls");  
+    mostrarEscenario(50,10);
+    sndPlaySound("sound\\Kirby Victory Dance.wav", SND_ASYNC);
+    gotoxy(20,5);
+    printf("Ganaste!!!!");
+    gotoxy(1,9);
+    printf("Pulse Escape para volver al menu.");
+    while (true) {
+        if (GetAsyncKeyState(ESC)) menu();
+    }
+
+}
+
+/**************** | hitBoxVPlayer() | **************/
+/* El proposito de esta funcion es verificar si el *
+ * jugador está colisionando con un obstaculo,     *
+ * con algún pincho o enemigo.                     *
+ * No recibe valores.                              *
+ * Retorna false al no colisionar o rue en caso    *
+ * contrario.                                      */
 bool hitBoxVPlayer() {
     Pixel *pos = jugador->info;
     Obstaculo *obstacle = firstList(obstaculos);
@@ -407,6 +503,8 @@ bool hitBoxVPlayer() {
     return false;
 }
 
+/**************** | hitBoxHPlayer() | ******************/
+/* Tiene el mismo proposito que hitBoxVPlayer().      */
 bool hitBoxHPlayer() {
     Pixel *pos = jugador->info;
     Obstaculo *obstacle = firstList(obstaculos);
@@ -434,6 +532,7 @@ bool hitBoxHPlayer() {
                 cleanVariables();
                 if (strcmp(jugador->level, "level1") == 0) level2(1);
                 if (strcmp(jugador->level, "level2") == 0) level3(1);
+                if (strcmp(jugador->level, "level3") == 0) winGame();
             }
             popCurrent(objetos);
         }
@@ -443,6 +542,13 @@ bool hitBoxHPlayer() {
     return false;
 }
 
+/**************** | hitBoxVbullet() | ******************/
+/* El proposito de esta funcion es verificar si alguna * 
+ * bala está colisionando con algún objeto, jugador o  *
+ * enemigo.                                            *
+ * Recibe la bala que está en movimiento.              *
+ * Retorna false en caso de no colisionar o true       *
+ * en caso contrario.                                  */
 bool hitBoxVbullet(Bullet *bala) {
     Obstaculo *obstacle = firstList(obstaculos);
     Limites *limits;
@@ -474,6 +580,8 @@ bool hitBoxVbullet(Bullet *bala) {
     return false;
 }
 
+/****************** | hitBoxHbullet() | ************************/
+/* El proposito de esta funcion es el mismo que hitBoxVbullet. */
 bool hitBoxHbullet(Bullet *bala) {
     Obstaculo *obstacle = firstList(obstaculos);
     Limites *limits;
@@ -506,6 +614,10 @@ bool hitBoxHbullet(Bullet *bala) {
     return false;
 }
 
+/*************** | mostrarObstaculos() | ******************/
+/* El proposito de esta funcion es mostrar los obstaculos *
+ * por pantalla.                                          *
+ * No recibe valores y tampoco retorna.                   */
 void mostrarObstaculos() {
     Obstaculo *obstacle = firstList(obstaculos);
     Limites *limits;
@@ -570,6 +682,11 @@ void mostrarObjetos() {
     }
 }
 
+/*************** | movimientoEnemigos() | **************/
+/* El proposito de esta funcion es realizar el         *
+ * movimeinto del enemigo y corroborar si el jugador   *
+ * está chocando con el.                               *  
+ * No recibe valores y tampoco retorna.                */
 void movimientoEnemigos() {
     Enemies *enemy = firstList(enemies);
     Pixel *posP = jugador->info;
@@ -608,6 +725,11 @@ void movimientoEnemigos() {
     }
 }
 
+/************** | accionTurrets() | *****************/
+/* El proposito de esta funcion que cada torreta    *
+ * que se encuentre dentro del mapa realice un      *
+ * disparo dependiendo de su coldown.               *
+ * No recibe valores y tampoco retorna.             */
 void accionTurrets() {
     Turrets *turret = firstList(torretas);
     Coldown *time ;
@@ -724,6 +846,13 @@ void movimientoVertical() {
     }
 }
 
+/***************** | disparo() | ****************/
+/* El proposito de esta funcion es realizar el  *
+ * movimiento de la bala dentro del mapa        *
+ * verificando si choca contra algún objeto     *
+ * o jugador.                                   *
+ * Recibe la lista de balas de cada entidad.    *
+ * No retorna valores.                          */
 void disparo(List *balas) {
     Bullet *bala;
 
@@ -758,6 +887,7 @@ void disparo(List *balas) {
             }
             gotoxy(bala->info->X, bala->info->Y);
             printf("%c", bala->info->forma);
+            if (jugador->info->X == bala->info->X && jugador->info->Y == bala->info->Y) muertePlayer();
             if (bala->info->Y == 1 || hitBoxVbullet(bala)) {
                 gotoxy(bala->info->X, bala->info->Y);
                 printf(" ");
@@ -768,7 +898,7 @@ void disparo(List *balas) {
             if (bala->info->Y != 27 && !hitBoxVbullet(bala)) bala->info->Y++;
             gotoxy(bala->info->X, bala->info->Y);
             printf("%c", bala->info->forma);
-            
+            if (jugador->info->X == bala->info->X && jugador->info->Y == bala->info->Y) muertePlayer();
             if (bala->info->Y == 27 || hitBoxVbullet(bala)) {
                 gotoxy(bala->info->X, bala->info->Y);
                 printf(" ");
@@ -780,6 +910,11 @@ void disparo(List *balas) {
 
 }
 
+/************ | saveData() | ***********/
+/* El proposito de esta función es     *
+ * guardar toda la información del     *
+ * luego de jugar cada partida.        *
+ * No recibe valores y tampoco retorna */
 void saveData() {
     FILE *archivo = fopen("csv\\Usuarios.csv", "w");
     Pair *aux;
@@ -813,12 +948,16 @@ void saveData() {
     fclose(archivo);
 }
 
+/*************** | acciones() | ******************/
+/* El proposito de esta función es permitir las  *
+ * acciones del jugador como el movimiento o el  *
+ * disparo.                                      *
+ * No recibe valores y tampoco retorna.          */
 void acciones() {
     Pixel *pos = jugador->info;
 
     gotoxy(jugador->info->X, jugador->info->Y);
     printf(" ");
-    //hitBoxHPlayer();
     if (jugador->jump->existSalto != true) movimientoLateral();
     
     movimientoVertical();
@@ -832,12 +971,16 @@ void acciones() {
         if (GetAsyncKeyState(ENTER) && jugador->havePistol == true) {
             createBullet(pos->X, pos->Y, jugador->direccionH, jugador->balas);
             jugador->havePistol = false;
-            sndPlaySound("sound\\SPOILER_Sr_Pelo_Boom_Sound_Effect.wav", SND_ASYNC);
         }
     }  
     disparo(jugador->balas);
 }
 
+/*************** | HUD() | **************/
+/* El proposito de esta función es      *
+ * mostrar informacion al usuario a     *
+ * medida que juego.                    *
+ * No recibe ni retorna valores.        */
 void HUD() {
     int cont;
 
@@ -854,6 +997,14 @@ void HUD() {
     printf("Pulse Escape para volver al menu.");
 }
 
+/************* | GameOver() | ****************/
+/* El proposito de esta función es mostrar   *
+ * la pantalla de muerte al usuario y        *
+ * llevarlo al menu.                         *
+ * Recibe una bandera que indica si el       *
+ * jugador murio o salio del juego por       *
+ * desicion propia.                          *
+ * No retorna valores.                       */
 void GameOver(int flag) {
     cleanList(torretas);
     cleanList(enemies);
@@ -862,7 +1013,7 @@ void GameOver(int flag) {
     if (flag == 1) {
         system("cls");
         gotoxy(50,10);
-        if (usuario->music == 1) sndPlaySound("sound\\PERDISTE.wav", SND_ASYNC);
+        if (usuario->music == 1) sndPlaySound("sound\\Sadness and Sorrow-8 Bits.wav", SND_ASYNC);
         printf("PERDISTEEEEE!!!!!");
         gotoxy(0,30);
         printf("Pulse Escape para volver al menu.");
@@ -872,8 +1023,12 @@ void GameOver(int flag) {
     }
 }
 
+/************ | muertePlayer() | **************/
+/* El proposito de esta función es provocar   *
+ * la muerte del usuario y llevarlo a la      *
+ * posicion inicial de cada nivel.            *
+ * No recibe ni retorna valores.              */
 void muertePlayer() {
-    if (usuario->music == 1) sndPlaySound("sound\\SOUND OFF ROBLOX SONIDO OFF MUERTE DE ROBLOX.wav", SND_SYNC);
     if (strcmp(jugador->level, "level1") == 0) {
         jugador->info->X = 2;
         jugador->info->Y = 18;
@@ -969,6 +1124,7 @@ void level1(int firstTime) {
         jugador = createPlayer(2, 18, 3, "level1", false);
     }
 
+    if (usuario->music == 1) sndPlaySound("sound\\Boss 2 Aaron's Remix (Terraria).wav", SND_ASYNC | SND_LOOP);
     prepareVariables();
 
     leerArchivoEnemies("csv\\Level1\\enemies.csv");
@@ -1089,7 +1245,6 @@ void registro() {
     }
     usuario = createUser(2, 18, password, name, "level1", 3, false);
     insertMap(usuarios, name, usuario);
-    //usuario = searchMap(usuarios, usuario->name);
     menu();
 }
 
@@ -1099,7 +1254,7 @@ void eliminarPersonaje() {
     gotoxy(2,12);
     printf("Eliminando Personaje");
     for (cont = 0; cont < 3; cont++) {
-        Sleep(250);
+        Sleep(300);
         printf(".");
     }
     eraseMap(usuarios, usuario->name);
@@ -1314,6 +1469,7 @@ void menu() {
             if (pos.X == 9 && pos.Y == 11) level1(1);
             if (pos.X == 9 && pos.Y == 16) opciones();
             if (pos.X == 31 && pos.Y == 11) {
+                if (usuario->music == 1) sndPlaySound("sound\\Boss 2 Aaron's Remix (Terraria).wav", SND_ASYNC | SND_LOOP);
                 if (strcmp(jugador->level, "level1") == 0) level1(0);
                 if (strcmp(jugador->level, "level2") == 0) level2(0);
                 if (strcmp(jugador->level, "level3") == 0) level3(0);
